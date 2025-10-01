@@ -22,7 +22,7 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/deltachat/dcrpcgen"
+Homepage = "https://github.com/chatmail/dcrpcgen"
 
 [project.optional-dependencies]
 dev = [
