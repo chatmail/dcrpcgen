@@ -27,7 +27,7 @@ def add(
 
 
 def get_schema(filename: str) -> dict:
-    """Load Delta Chat JSON-RPC schema from file path"""
+    """Load Chatmail JSON-RPC schema from file path"""
     if filename:
         with Path(filename).open(encoding="utf-8") as schema_file:
             return json.load(schema_file)
@@ -59,7 +59,7 @@ def get_parser() -> argparse.ArgumentParser:
     )
 
     parser = argparse.ArgumentParser(
-        description="Delta Chat JSON-RPC client generator", parents=[base]
+        description="Chatmail JSON-RPC client generator", parents=[base]
     )
     parser.add_argument("-v", "--version", action="version", version=__version__)
     subparsers = parser.add_subparsers(title="subcommands")
