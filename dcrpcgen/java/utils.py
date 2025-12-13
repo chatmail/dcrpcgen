@@ -11,7 +11,7 @@ def get_banner() -> str:
 def create_comment(text: str, indentation: str = "") -> str:
     """Generate a Java comment"""
     if "\n" not in text:
-        return f"{indentation}/* {text.strip()} */\n"
+        return f"{indentation}/** {text.strip()} */\n"
 
     comment = f"{indentation}/**\n"
     for line in text.split("\n"):
