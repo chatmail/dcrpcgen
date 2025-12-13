@@ -8,6 +8,7 @@ from typing import Callable
 
 from ._version import __version__
 from .java import java_cmd
+from .python import python_cmd
 
 
 def add(
@@ -64,7 +65,7 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument("-v", "--version", action="version", version=__version__)
     subparsers = parser.add_subparsers(title="subcommands")
 
-    for generator in [java_cmd]:
+    for generator in [java_cmd, python_cmd]:
         add(subparsers, base, generator)
 
     return parser

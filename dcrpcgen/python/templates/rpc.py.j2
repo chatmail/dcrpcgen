@@ -1,0 +1,29 @@
+"""JSON-RPC API definition."""
+
+import dataclasses
+from typing import Any, Optional
+
+from .transport import RpcTransport
+from .types import *
+
+
+class Rpc:
+    """Access to the chatmail JSON-RPC API."""
+
+    def __init__(self, transport: RpcTransport) -> None:
+        self.transport = transport
+
+{% for method in methods %}
+  {{- generate_method(method)}}
+{% endfor -%}
+
+
+def _wrap(arg: Any) -> Any:
+    if isinstance(arg, dict):
+        return {key: _wrap(val) for key, val in arg.items()}
+    if isinstance(arg, list):
+        return [_wrap(elem) for elem in arg]
+
+    if dataclasses.is_dataclass(arg):
+        return snake2camel(dataclasses.asdict(arg))
+    return arg
