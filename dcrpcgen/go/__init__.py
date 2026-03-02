@@ -4,9 +4,10 @@ from argparse import Namespace
 from pathlib import Path
 from typing import Any
 
+from ..utils import snake2pascal
 from .templates import get_template
 from .types import generate_type, has_pair_types
-from .utils import create_comment, decode_type, get_banner, snake2pascal
+from .utils import create_comment, decode_type, get_banner
 
 BANNER = get_banner()
 

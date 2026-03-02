@@ -2,7 +2,8 @@
 
 from typing import Any
 
-from .utils import camel2pascal, create_comment, decode_type
+from ..utils import camel2pascal
+from .utils import create_comment, decode_type
 
 
 def generate_enum_type(name: str, schemas: list[dict]) -> str:

@@ -21,18 +21,6 @@ def create_comment(text: str, indentation: str = "") -> str:
     return result
 
 
-def snake2pascal(name: str) -> str:
-    """Convert snake_case to PascalCase"""
-    return "".join(word.capitalize() for word in name.split("_"))
-
-
-def camel2pascal(name: str) -> str:
-    """Capitalize first letter of a camelCase name to make PascalCase"""
-    if not name:
-        return name
-    return name[0].upper() + name[1:]
-
-
 def decode_type(property_desc: dict[str, Any]) -> tuple[str, bool]:
     """Decode a JSON schema type descriptor to a Go type string.
 
