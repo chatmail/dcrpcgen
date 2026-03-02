@@ -57,18 +57,8 @@ def decode_type(property_desc: dict[str, Any]) -> tuple[str, bool]:
         return "bool", False
     if prop_type == "integer":
         fmt = property_desc.get("format", "")
-        if fmt == "uint32":
-            return "uint32", False
-        if fmt == "int32":
-            return "int32", False
-        if fmt == "uint16":
-            return "uint16", False
-        if fmt == "uint64":
-            return "uint64", False
-        if fmt == "int64":
-            return "int64", False
-        if fmt == "uint":
-            return "uint", False
+        if fmt in ("uint32", "int32", "uint16", "uint64", "int64", "uint"):
+            return fmt, False
         return "int", False
     if prop_type == "number":
         return "float64", False

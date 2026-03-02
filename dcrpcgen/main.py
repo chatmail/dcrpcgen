@@ -4,7 +4,6 @@ import argparse
 import json
 import subprocess
 from pathlib import Path
-from typing import Callable
 
 from ._version import __version__
 from .go import add_go_cmd
