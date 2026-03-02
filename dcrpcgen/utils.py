@@ -1,6 +1,8 @@
 """Common utilities"""
 
+import argparse
 import re
+from typing import Callable
 
 
 def camel2snake(name: str) -> str:
@@ -27,3 +29,19 @@ def camel2pascal(name: str) -> str:
     if not name:
         return name
     return name[0].upper() + name[1:]
+
+
+def add_subcommand(
+    subparsers: argparse._SubParsersAction,
+    base: argparse.ArgumentParser,
+    func: Callable[[argparse.Namespace], None],
+) -> argparse.ArgumentParser:
+    """Add function as CLI subcommand"""
+    name = func.__name__
+    assert name.endswith("_cmd")
+    name = name[:-4]
+    assert func.__doc__
+    doc = (func.__doc__).strip()
+    p = subparsers.add_parser(name, description=doc, help=doc, parents=[base])
+    p.set_defaults(func=func)
+    return p

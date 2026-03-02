@@ -1,10 +1,10 @@
 """Go code generation"""
 
-from argparse import Namespace
+import argparse
 from pathlib import Path
 from typing import Any
 
-from ..utils import snake2pascal
+from ..utils import add_subcommand, snake2pascal
 from .templates import get_template
 from .types import generate_type, has_pair_types
 from .utils import create_comment, decode_type, get_banner
@@ -12,9 +12,19 @@ from .utils import create_comment, decode_type, get_banner
 BANNER = get_banner()
 
 
-def go_cmd(args: Namespace) -> None:
+def add_go_cmd(subparsers: argparse._SubParsersAction, base: argparse.ArgumentParser) -> None:
+    p = add_subcommand(subparsers, base, go_cmd)
+    p.add_argument(
+        "--package",
+        help=("Go module import path for the generated package" " (default: %(default)s)"),
+        metavar="PATH",
+        dest="package_path",
+        default="github.com/chatmail/rpc-client-go/v2/deltachat",
+    )
+
+
+def go_cmd(args: argparse.Namespace) -> None:
     """Generate JSON-RPC client for the Go programming language"""
-    package_path = getattr(args, "package_path", "deltachat-rpc-client")
     folder = Path(args.folder)
     folder.mkdir(parents=True, exist_ok=True)
 
@@ -45,7 +55,7 @@ def go_cmd(args: Namespace) -> None:
         output.write(
             template.render(
                 banner=BANNER,
-                package_path=package_path,
+                package_path=args.package_path,
                 methods=methods,
                 generate_method=generate_method,
             )

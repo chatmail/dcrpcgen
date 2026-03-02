@@ -13,7 +13,6 @@ type Rpc struct {
 	Context   context.Context
 	Transport transport.RpcTransport
 }
-
-{% for method in methods -%}
+{% for method in methods %}
 {{ generate_method(method) }}
 {% endfor -%}

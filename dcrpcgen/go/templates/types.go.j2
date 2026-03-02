@@ -1,6 +1,5 @@
 {{ banner }}
 package deltachat
-
 {% if has_pairs %}
 import "encoding/json"
 
@@ -20,8 +19,7 @@ func (p *Pair[A, B]) UnmarshalJSON(data []byte) error {
 	}
 	return json.Unmarshal(raw[1], &p.Second)
 }
-
 {% endif -%}
-{% for type_def in type_defs -%}
+{% for type_def in type_defs %}
 {{ type_def }}
 {% endfor -%}
