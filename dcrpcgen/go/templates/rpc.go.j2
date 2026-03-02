@@ -1,0 +1,19 @@
+{{ banner }}
+package deltachat
+
+import (
+	"context"
+
+	"{{ package_path }}/transport"
+)
+
+// Delta Chat RPC client. This is the root of the API.
+type Rpc struct {
+	// Context to be used on calls to Transport.CallResult() and Transport.Call()
+	Context   context.Context
+	Transport transport.RpcTransport
+}
+
+{% for method in methods -%}
+{{ generate_method(method) }}
+{% endfor -%}

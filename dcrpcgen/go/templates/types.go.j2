@@ -1,0 +1,27 @@
+{{ banner }}
+package deltachat
+
+{% if has_pairs %}
+import "encoding/json"
+
+// Pair is a generic two-element tuple used for RPC methods that return two values.
+type Pair[A, B any] struct {
+	First  A
+	Second B
+}
+
+func (p *Pair[A, B]) UnmarshalJSON(data []byte) error {
+	var raw [2]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	if err := json.Unmarshal(raw[0], &p.First); err != nil {
+		return err
+	}
+	return json.Unmarshal(raw[1], &p.Second)
+}
+
+{% endif -%}
+{% for type_def in type_defs -%}
+{{ type_def }}
+{% endfor -%}

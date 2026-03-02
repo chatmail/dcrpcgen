@@ -43,7 +43,7 @@ dcrpcgen = "dcrpcgen.main:main"
 version_file = "dcrpcgen/_version.py"
 
 [tool.setuptools]
-packages = ["dcrpcgen"]
+packages = ["dcrpcgen", "dcrpcgen.java", "dcrpcgen.go"]
 
 [tool.isort]
 profile = "black"

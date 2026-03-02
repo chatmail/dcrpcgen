@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Callable
 
 from ._version import __version__
+from .go import go_cmd
 from .java import java_cmd
 
 
@@ -64,8 +65,19 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument("-v", "--version", action="version", version=__version__)
     subparsers = parser.add_subparsers(title="subcommands")
 
-    for generator in [java_cmd]:
-        add(subparsers, base, generator)
+    for generator in [java_cmd, go_cmd]:
+        p = add(subparsers, base, generator)
+        if generator == go_cmd:
+            p.add_argument(
+                "--package",
+                help=(
+                    "Go module import path for the generated package"
+                    " (default: deltachat-rpc-client)"
+                ),
+                metavar="PATH",
+                dest="package_path",
+                default="deltachat-rpc-client",
+            )
 
     return parser
 
