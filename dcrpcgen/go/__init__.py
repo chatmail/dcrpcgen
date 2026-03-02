@@ -80,9 +80,7 @@ def generate_method(method: dict[str, Any]) -> str:
     if "description" in method:
         text += create_comment(method["description"].strip())
 
-    param_list = ", ".join(
-        f"{param['name']} {decode_type(param['schema'])[0]}" for param in params
-    )
+    param_list = ", ".join(f"{param['name']} {decode_type(param['schema'])[0]}" for param in params)
 
     if result_type == "void":
         text += f"func (rpc *Rpc) {go_name}({param_list}) error {{\n"
@@ -92,9 +90,7 @@ def generate_method(method: dict[str, Any]) -> str:
         text += f"func (rpc *Rpc) {go_name}({param_list}) ({result_type}, error) {{\n"
         text += f"\tvar result {result_type}\n"
         call_args = ", ".join([f'"{name}"'] + [param["name"] for param in params])
-        text += (
-            f"\terr := rpc.Transport.CallResult(rpc.Context, &result, {call_args})\n"
-        )
+        text += f"\terr := rpc.Transport.CallResult(rpc.Context, &result, {call_args})\n"
         text += "\treturn result, err\n"
     text += "}"
     return text

@@ -49,9 +49,7 @@ def collect_union_fields(
     return all_properties, common_required or set()
 
 
-def generate_struct_fields(
-    properties: dict[str, Any], required_fields: set[str] | None
-) -> str:
+def generate_struct_fields(properties: dict[str, Any], required_fields: set[str] | None) -> str:
     """Generate Go struct fields from a properties dict."""
     lines = []
     for prop_name, prop_schema in properties.items():
