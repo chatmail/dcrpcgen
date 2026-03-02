@@ -58,9 +58,7 @@ def decode_type(property_desc: dict[str, Any]) -> tuple[str, bool]:
                 typ1 = decode_type(property_desc["items"][0])[0]
                 typ2 = decode_type(property_desc["items"][1])[0]
                 return f"Pair<{typ1}, {typ2}>", False
-            raise ValueError(
-                f"Tuple not implemented for {count} elements: {property_desc}"
-            )
+            raise ValueError(f"Tuple not implemented for {count} elements: {property_desc}")
         items_type = decode_type(property_desc["items"])[0]
         return f"java.util.List<{items_type}>", False
     elif "additionalProperties" in property_desc:

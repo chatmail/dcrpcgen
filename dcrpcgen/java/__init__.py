@@ -54,11 +54,7 @@ def java_cmd(args: Namespace) -> None:
     with path.open("w", encoding="utf-8") as output:
         print(f"Generating {path}")
         template = get_template("BaseTransport.java.j2")
-        output.write(
-            template.render(
-                package=rpc_package, util_package=util_package, banner=BANNER
-            )
-        )
+        output.write(template.render(package=rpc_package, util_package=util_package, banner=BANNER))
 
 
 def generate_method(method: dict[str, Any]) -> str:
@@ -71,13 +67,9 @@ def generate_method(method: dict[str, Any]) -> str:
     if "description" in method:
         text += create_comment(method["description"], "  ")
     text += f"  public {result_type} {snake2camel(name)}("
-    text += ", ".join(
-        decode_type(param["schema"])[0] + " " + param["name"] for param in params
-    )
+    text += ", ".join(decode_type(param["schema"])[0] + " " + param["name"] for param in params)
     text += ") throws RpcException {\n"
-    args = ", ".join(
-        [f'"{name}"'] + [f'mapper.valueToTree({param["name"]})' for param in params]
-    )
+    args = ", ".join([f'"{name}"'] + [f'mapper.valueToTree({param["name"]})' for param in params])
     if result_type == "void":
         text += f"    transport.call({args});\n"
     else:
