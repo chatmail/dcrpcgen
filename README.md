@@ -21,3 +21,17 @@ dcrpcgen java --schema schema.json --output src
 ```
 
 Run `dcrpcgen --help` to see all available options.
+
+## Contributing / Developing
+
+Install development dependencies:
+
+```
+pip install -e '.[dev]'
+```
+
+Check code with linter:
+
+```
+prospector
+```

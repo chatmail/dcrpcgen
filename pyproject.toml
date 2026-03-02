@@ -29,8 +29,7 @@ dev = [
   "black",
   "mypy",
   "isort",
-  "pylint",
-  "pylama",
+  "prospector",
   "setuptools",
   "pytest",
 ]
@@ -44,6 +43,9 @@ version_file = "dcrpcgen/_version.py"
 
 [tool.setuptools]
 packages = ["dcrpcgen"]
+
+[tool.black]
+line-length = 100
 
 [tool.isort]
 profile = "black"
