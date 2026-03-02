@@ -47,8 +47,17 @@ func (trans *IOTransport) Open() error {
 		trans.cmd.Env = append(os.Environ(), "DC_ACCOUNTS_PATH="+trans.AccountsDir)
 	}
 	trans.cmd.Stderr = trans.Stderr
-	trans.stdin, _ = trans.cmd.StdinPipe()
-	stdout, _ := trans.cmd.StdoutPipe()
+	var err error
+	trans.stdin, err = trans.cmd.StdinPipe()
+	if err != nil {
+		trans.cancel()
+		return err
+	}
+	stdout, err := trans.cmd.StdoutPipe()
+	if err != nil {
+		trans.cancel()
+		return err
+	}
 	if err := trans.cmd.Start(); err != nil {
 		trans.cancel()
 		return err
@@ -69,7 +78,7 @@ func (trans *IOTransport) Close() {
 
 	_ = trans.stdin.Close()
 	trans.cancel()
-	trans.cmd.Process.Wait() //nolint:errcheck
+	trans.cmd.Wait() //nolint:errcheck
 }
 
 // Call requests the RPC server to call a function that does not have a return value.
