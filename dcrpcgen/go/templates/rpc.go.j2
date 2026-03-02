@@ -3,6 +3,9 @@ package deltachat
 
 import (
 	"context"
+{% if has_union_return %}
+	"encoding/json"
+{% endif %}
 
 	"{{ package_path }}/transport"
 )
@@ -13,6 +16,8 @@ type Rpc struct {
 	Context   context.Context
 	Transport transport.RpcTransport
 }
+
 {% for method in methods %}
 {{ generate_method(method) }}
-{% endfor -%}
+
+{% endfor %}

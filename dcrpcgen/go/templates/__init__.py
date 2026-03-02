@@ -2,7 +2,11 @@
 
 from jinja2 import Environment, PackageLoader, Template
 
-env = Environment(loader=PackageLoader(__name__.rsplit(".", maxsplit=1)[0], "templates"))
+env = Environment(
+    loader=PackageLoader(__name__.rsplit(".", maxsplit=1)[0], "templates"),
+    trim_blocks=True,
+    lstrip_blocks=True,
+)
 
 
 def get_template(name: str) -> Template:
