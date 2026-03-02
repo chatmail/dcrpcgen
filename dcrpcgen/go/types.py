@@ -94,7 +94,7 @@ def _generate_unmarshal_json(
         base_type = go_type.lstrip("*")
         if is_optional:
             lines.append(
-                f"\tif len(raw.{exported_name}) > 0 " f'&& string(raw.{exported_name}) != "null" {{'
+                f'\tif len(raw.{exported_name}) > 0 && string(raw.{exported_name}) != "null" {{'
             )
             lines.append("\t\tvar err error")
             lines.append(f"\t\ts.{exported_name}, err = unmarshal{base_type}(raw.{exported_name})")
