@@ -49,6 +49,7 @@ line-length = 100
 
 [tool.isort]
 profile = "black"
+skip_glob = ["*/_version.py"]
 
 [tool.mypy]
 ignore_missing_imports = "True"
