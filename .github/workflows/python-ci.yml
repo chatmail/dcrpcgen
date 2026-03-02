@@ -26,10 +26,11 @@ jobs:
           python -m pip install '.[dev]'
       - name: Check code with black
         run: |
+          isort --check .
           black --check .
       - name: Lint code
         run: |
-          pylama
+          prospector
       - name: Test with pytest
         run: |
           #pytest

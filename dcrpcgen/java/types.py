@@ -26,9 +26,7 @@ def generate_enum(folder: Path, package: str, name: str, schemas: list[dict]) ->
         )
 
 
-def generate_supertype(
-    folder: Path, package: str, name: str, schema: dict[str, Any]
-) -> None:
+def generate_supertype(folder: Path, package: str, name: str, schema: dict[str, Any]) -> None:
     """Generate abstract super-class"""
     path = folder / f"{name}.java"
     with path.open("w", encoding="utf-8") as output:
@@ -71,9 +69,7 @@ def generate_subtype(schema: dict[str, Any], parent: str) -> str:
     return text
 
 
-def generate_class(
-    folder: Path, package: str, name: str, schema: dict[str, Any]
-) -> None:
+def generate_class(folder: Path, package: str, name: str, schema: dict[str, Any]) -> None:
     """Generate normal standalone class type (no child class, no super-class)"""
     assert schema["type"] == "object"
     path = folder / f"{name}.java"
@@ -108,9 +104,7 @@ def generate_properties(properties: dict[str, Any], is_subclass: bool) -> str:
             minimum = "\n"
         if optional:
             jackson_pack = "com.fasterxml.jackson.annotation"
-            text += (
-                f"{tab}@{jackson_pack}.JsonSetter(nulls = {jackson_pack}.Nulls.SET)\n"
-            )
+            text += f"{tab}@{jackson_pack}.JsonSetter(nulls = {jackson_pack}.Nulls.SET)\n"
         text += f"{tab}public {typ} {property_name};{minimum}"
     return text
 
