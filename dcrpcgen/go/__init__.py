@@ -7,9 +7,7 @@ from typing import Any
 from ..utils import add_subcommand, snake2pascal
 from .templates import get_template
 from .types import generate_type, has_pair_types
-from .utils import create_comment, decode_type, get_banner
-
-BANNER = get_banner()
+from .utils import create_comment, decode_type
 
 
 def add_go_cmd(subparsers: argparse._SubParsersAction, base: argparse.ArgumentParser) -> None:
@@ -49,7 +47,6 @@ def go_cmd(args: argparse.Namespace) -> None:
         template = get_template("types.go.j2")
         output.write(
             template.render(
-                banner=BANNER,
                 type_defs=type_defs,
                 has_pairs=uses_pairs,
                 has_union_types=has_union_types,
@@ -69,7 +66,6 @@ def go_cmd(args: argparse.Namespace) -> None:
         template = get_template("rpc.go.j2")
         output.write(
             template.render(
-                banner=BANNER,
                 package_path=args.package_path,
                 methods=methods,
                 generate_method=_generate_method,
@@ -85,13 +81,13 @@ def go_cmd(args: argparse.Namespace) -> None:
     with path.open("w", encoding="utf-8") as output:
         print(f"Generating {path}")
         template = get_template("transport.go.j2")
-        output.write(template.render(banner=BANNER))
+        output.write(template.render())
 
     path = transport_folder / "io_transport.go"
     with path.open("w", encoding="utf-8") as output:
         print(f"Generating {path}")
         template = get_template("io_transport.go.j2")
-        output.write(template.render(banner=BANNER))
+        output.write(template.render())
 
 
 def _method_returns_union(method: dict[str, Any], union_types: set[str]) -> bool:
