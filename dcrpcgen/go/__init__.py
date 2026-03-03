@@ -192,9 +192,11 @@ def generate_method(method: dict[str, Any], union_types: set[str] | None = None)
         text += "\t}\n"
         text += f"\tresult := make(map[string]{val_type}, len(rawMap))\n"
         text += "\tfor k, raw := range rawMap {\n"
-        text += f"\t\tif err := unmarshal{val_type}(raw, &result[k]); err != nil {{\n"
+        text += f"\t\tvar val {val_type}\n"
+        text += f"\t\tif err := unmarshal{val_type}(raw, &val); err != nil {{\n"
         text += "\t\t\treturn nil, err\n"
         text += "\t\t}\n"
+        text += "\t\tresult[k] = val\n"
         text += "\t}\n"
         text += "\treturn result, nil\n"
     else:
