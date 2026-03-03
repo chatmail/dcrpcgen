@@ -243,7 +243,12 @@ def has_pair_types(methods: list[dict]) -> bool:
     return False
 
 
-def generate_type(name: str, schema: dict[str, Any], union_types: set[str] | None = None, unmarshal_types: set[str] | None = None) -> str:
+def generate_type(
+    name: str,
+    schema: dict[str, Any],
+    union_types: set[str] | None = None,
+    unmarshal_types: set[str] | None = None,
+) -> str:
     """Generate a Go type definition from a JSON schema type"""
     if "oneOf" in schema:
         if all(typ.get("type") == "string" for typ in schema["oneOf"]):

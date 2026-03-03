@@ -5,15 +5,13 @@ import (
 {% if has_union_return %}
 	"encoding/json"
 {% endif %}
-
-	"{{ package_path }}/transport"
 )
 
 // Delta Chat RPC client. This is the root of the API.
 type Rpc struct {
 	// Context to be used on calls to Transport.CallResult() and Transport.Call()
 	Context   context.Context
-	Transport transport.RpcTransport
+	Transport RpcTransport
 }
 
 {% for method in methods %}

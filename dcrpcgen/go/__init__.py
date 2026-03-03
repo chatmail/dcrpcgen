@@ -11,14 +11,7 @@ from .utils import create_comment, decode_type
 
 
 def add_go_cmd(subparsers: argparse._SubParsersAction, base: argparse.ArgumentParser) -> None:
-    p = add_subcommand(subparsers, base, go_cmd)
-    p.add_argument(
-        "--package",
-        help=("Go module import path for the generated package" " (default: %(default)s)"),
-        metavar="PATH",
-        dest="package_path",
-        default="github.com/chatmail/rpc-client-go/v2/deltachat",
-    )
+    add_subcommand(subparsers, base, go_cmd)
 
 
 def go_cmd(args: argparse.Namespace) -> None:
@@ -38,13 +31,9 @@ def go_cmd(args: argparse.Namespace) -> None:
 
     # Generate types.go
     uses_pairs = has_pair_types(methods)
-    has_union_types = bool(union_types)
 
-    # Compute which union types actually need an unmarshal helper:
-    # - returned directly/as array element/as map value by a method
-    # - used as a field type inside a struct (whose UnmarshalJSON will call the helper)
+    # Compute which union types actually need an unmarshal helper
     unmarshal_union_types = _compute_unmarshal_union_types(methods, schemas, union_types)
-    has_unmarshal_types = bool(unmarshal_union_types)
 
     # Build a union-type-aware type generator closure
     def _generate_type(name: str, schema: dict[str, Any]) -> str:
@@ -59,8 +48,7 @@ def go_cmd(args: argparse.Namespace) -> None:
                 schemas=schemas,
                 generate_type=_generate_type,
                 has_pairs=uses_pairs,
-                has_union_types=has_union_types,
-                has_unmarshal_types=has_unmarshal_types,
+                has_unmarshal_types=bool(unmarshal_union_types),
             )
         )
 
@@ -77,24 +65,20 @@ def go_cmd(args: argparse.Namespace) -> None:
         template = get_template("rpc.go.j2")
         output.write(
             template.render(
-                package_path=args.package_path,
                 methods=methods,
                 generate_method=_generate_method,
                 has_union_return=has_union_return,
             )
         )
 
-    # Generate transport/
-    transport_folder = folder / "transport"
-    transport_folder.mkdir(parents=True, exist_ok=True)
-
-    path = transport_folder / "transport.go"
+    # Generate transport-related code
+    path = folder / "transport.go"
     with path.open("w", encoding="utf-8") as output:
         print(f"Generating {path}")
         template = get_template("transport.go.j2")
         output.write(template.render())
 
-    path = transport_folder / "io_transport.go"
+    path = folder / "io_transport.go"
     with path.open("w", encoding="utf-8") as output:
         print(f"Generating {path}")
         template = get_template("io_transport.go.j2")
@@ -156,9 +140,9 @@ def _method_returns_union(method: dict[str, Any], union_types: set[str]) -> bool
             return True
     if isinstance(result_schema.get("additionalProperties"), dict):
         val_ref = (
-            result_schema["additionalProperties"].get("$ref", "").removeprefix(
-                "#/components/schemas/"
-            )
+            result_schema["additionalProperties"]
+            .get("$ref", "")
+            .removeprefix("#/components/schemas/")
         )
         if val_ref in union_types:
             return True
@@ -229,8 +213,8 @@ def generate_method(method: dict[str, Any], union_types: set[str] | None = None)
         in union_types
     ):
         # Return type is map[string]UnionType; unmarshal each value individually
-        val_type = (
-            result_schema["additionalProperties"]["$ref"].removeprefix("#/components/schemas/")
+        val_type = result_schema["additionalProperties"]["$ref"].removeprefix(
+            "#/components/schemas/"
         )
         text += f"func (rpc *Rpc) {go_name}({param_list}) (map[string]{val_type}, error) {{\n"
         text += "\tvar rawMap map[string]json.RawMessage\n"
