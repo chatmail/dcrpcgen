@@ -171,6 +171,7 @@ def generate_variant_struct(parent_name: str, variant: dict[str, Any]) -> str:
         lines.append(fields)
     lines.append("}")
     lines.append(f"func (*{variant_name}) is{parent_name}Variant() {{}}")
+    lines.append(f'func (*{variant_name}) GetKind() string {{ return "{kind_val}" }}')
     return "\n".join(lines)
 
 
@@ -185,6 +186,7 @@ def generate_union_type(name: str, schema: dict[str, Any]) -> str:
     # Interface declaration
     parts.append(f"type {name} interface {{")
     parts.append(f"\tis{name}Variant()")
+    parts.append("\tGetKind() string")
     parts.append("}")
 
     # One struct per variant
