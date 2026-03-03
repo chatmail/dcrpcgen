@@ -95,7 +95,7 @@ def go_cmd(args: argparse.Namespace) -> None:
 
 
 def _method_returns_union(method: dict[str, Any], union_types: set[str]) -> bool:
-    """Return True if the method's result type is (or is an array of) a union type."""
+    """Return True if the method's result type is (or is an array/map of) a union type."""
     result_schema = method.get("result", {}).get("schema", {})
     result_type, _ = decode_type(result_schema)
     if result_type.lstrip("*") in union_types:
@@ -103,6 +103,14 @@ def _method_returns_union(method: dict[str, Any], union_types: set[str]) -> bool
     if result_schema.get("type") == "array" and isinstance(result_schema.get("items"), dict):
         item_ref = result_schema["items"].get("$ref", "").removeprefix("#/components/schemas/")
         if item_ref in union_types:
+            return True
+    if isinstance(result_schema.get("additionalProperties"), dict):
+        val_ref = (
+            result_schema["additionalProperties"].get("$ref", "").removeprefix(
+                "#/components/schemas/"
+            )
+        )
+        if val_ref in union_types:
             return True
     return False
 
@@ -159,6 +167,32 @@ def generate_method(method: dict[str, Any], union_types: set[str] | None = None)
         text += f"\tresult := make([]{item_type}, len(rawList))\n"
         text += "\tfor i, raw := range rawList {\n"
         text += f"\t\tif err := unmarshal{item_type}(raw, &result[i]); err != nil {{\n"
+        text += "\t\t\treturn nil, err\n"
+        text += "\t\t}\n"
+        text += "\t}\n"
+        text += "\treturn result, nil\n"
+    elif (
+        isinstance(result_schema.get("additionalProperties"), dict)
+        and result_schema["additionalProperties"]
+        .get("$ref", "")
+        .removeprefix("#/components/schemas/")
+        in union_types
+    ):
+        # Return type is map[string]UnionType; unmarshal each value individually
+        val_type = (
+            result_schema["additionalProperties"]["$ref"].removeprefix("#/components/schemas/")
+        )
+        text += f"func (rpc *Rpc) {go_name}({param_list}) (map[string]{val_type}, error) {{\n"
+        text += "\tvar rawMap map[string]json.RawMessage\n"
+        text += (
+            f"\tif err := rpc.Transport.CallResult(rpc.Context, &rawMap, {call_args}); "
+            "err != nil {\n"
+        )
+        text += "\t\treturn nil, err\n"
+        text += "\t}\n"
+        text += f"\tresult := make(map[string]{val_type}, len(rawMap))\n"
+        text += "\tfor k, raw := range rawMap {\n"
+        text += f"\t\tif err := unmarshal{val_type}(raw, &result[k]); err != nil {{\n"
         text += "\t\t\treturn nil, err\n"
         text += "\t\t}\n"
         text += "\t}\n"
