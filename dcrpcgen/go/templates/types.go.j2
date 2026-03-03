@@ -1,9 +1,9 @@
 package deltachat
-{% if has_pairs or has_union_types %}
+{% if has_pairs or has_unmarshal_types %}
 
 import (
 	"encoding/json"
-{% if has_union_types %}
+{% if has_unmarshal_types %}
 	"fmt"
 {% endif %}
 )

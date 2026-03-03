@@ -40,9 +40,15 @@ def go_cmd(args: argparse.Namespace) -> None:
     uses_pairs = has_pair_types(methods)
     has_union_types = bool(union_types)
 
+    # Compute which union types actually need an unmarshal helper:
+    # - returned directly/as array element/as map value by a method
+    # - used as a field type inside a struct (whose UnmarshalJSON will call the helper)
+    unmarshal_union_types = _compute_unmarshal_union_types(methods, schemas, union_types)
+    has_unmarshal_types = bool(unmarshal_union_types)
+
     # Build a union-type-aware type generator closure
     def _generate_type(name: str, schema: dict[str, Any]) -> str:
-        return generate_type(name, schema, union_types)
+        return generate_type(name, schema, union_types, unmarshal_union_types)
 
     path = folder / "types.go"
     with path.open("w", encoding="utf-8") as output:
@@ -54,6 +60,7 @@ def go_cmd(args: argparse.Namespace) -> None:
                 generate_type=_generate_type,
                 has_pairs=uses_pairs,
                 has_union_types=has_union_types,
+                has_unmarshal_types=has_unmarshal_types,
             )
         )
 
@@ -92,6 +99,49 @@ def go_cmd(args: argparse.Namespace) -> None:
         print(f"Generating {path}")
         template = get_template("io_transport.go.j2")
         output.write(template.render())
+
+
+def _compute_unmarshal_union_types(
+    methods: list[dict[str, Any]],
+    schemas: dict[str, Any],
+    union_types: set[str],
+) -> set[str]:
+    """Return the set of union types that need an unmarshal helper.
+
+    A union type needs its helper when it is:
+    - returned directly, as an array element, or as a map value by any method, OR
+    - used as a field type inside a struct (because the struct's UnmarshalJSON calls the helper).
+    """
+    needed: set[str] = set()
+
+    # Methods that return union types
+    for method in methods:
+        result_schema = method.get("result", {}).get("schema", {})
+        base_type = decode_type(result_schema)[0].lstrip("*")
+        if base_type in union_types:
+            needed.add(base_type)
+        if result_schema.get("type") == "array" and isinstance(result_schema.get("items"), dict):
+            ref = result_schema["items"].get("$ref", "").removeprefix("#/components/schemas/")
+            if ref in union_types:
+                needed.add(ref)
+        if isinstance(result_schema.get("additionalProperties"), dict):
+            ref = (
+                result_schema["additionalProperties"]
+                .get("$ref", "")
+                .removeprefix("#/components/schemas/")
+            )
+            if ref in union_types:
+                needed.add(ref)
+
+    # Struct fields that are of a union type
+    for schema in schemas.values():
+        if schema.get("type") == "object":
+            for prop_schema in schema.get("properties", {}).values():
+                base_type = decode_type(prop_schema)[0].lstrip("*")
+                if base_type in union_types:
+                    needed.add(base_type)
+
+    return needed
 
 
 def _method_returns_union(method: dict[str, Any], union_types: set[str]) -> bool:

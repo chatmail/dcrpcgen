@@ -175,8 +175,14 @@ def generate_variant_struct(parent_name: str, variant: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def generate_union_type(name: str, schema: dict[str, Any]) -> str:
-    """Generate a Go interface + per-variant structs + unmarshal helper for a union type."""
+def generate_union_type(
+    name: str, schema: dict[str, Any], unmarshal_types: set[str] | None = None
+) -> str:
+    """Generate a Go interface + per-variant structs + unmarshal helper for a union type.
+
+    The unmarshal helper is only emitted when ``name`` is in ``unmarshal_types``
+    (or when ``unmarshal_types`` is ``None``, meaning "generate all").
+    """
     parts = []
 
     if "description" in schema:
@@ -194,28 +200,29 @@ def generate_union_type(name: str, schema: dict[str, Any]) -> str:
         parts.append("")
         parts.append(generate_variant_struct(name, variant))
 
-    # Unmarshal helper (switches on the "kind" discriminator)
-    parts.append("")
-    parts.append(f"func unmarshal{name}(data json.RawMessage, out *{name}) error {{")
-    parts.append('\tvar header struct { Kind string `json:"kind"` }')
-    parts.append("\tif err := json.Unmarshal(data, &header); err != nil {")
-    parts.append("\t\treturn err")
-    parts.append("\t}")
-    parts.append("\tswitch header.Kind {")
-    for variant in schema["oneOf"]:
-        kind_val = variant["properties"]["kind"]["enum"][0]
-        variant_name = name + camel2pascal(kind_val)
-        parts.append(f'\tcase "{kind_val}":')
-        parts.append(f"\t\tvar v {variant_name}")
-        parts.append("\t\tif err := json.Unmarshal(data, &v); err != nil {")
-        parts.append("\t\t\treturn err")
-        parts.append("\t\t}")
-        parts.append("\t\t*out = &v")
-    parts.append("\tdefault:")
-    parts.append(f'\t\treturn fmt.Errorf("unknown {name} variant: %q", header.Kind)')
-    parts.append("\t}")
-    parts.append("\treturn nil")
-    parts.append("}")
+    # Unmarshal helper (switches on the "kind" discriminator) – only when needed
+    if unmarshal_types is None or name in unmarshal_types:
+        parts.append("")
+        parts.append(f"func unmarshal{name}(data json.RawMessage, out *{name}) error {{")
+        parts.append('\tvar header struct { Kind string `json:"kind"` }')
+        parts.append("\tif err := json.Unmarshal(data, &header); err != nil {")
+        parts.append("\t\treturn err")
+        parts.append("\t}")
+        parts.append("\tswitch header.Kind {")
+        for variant in schema["oneOf"]:
+            kind_val = variant["properties"]["kind"]["enum"][0]
+            variant_name = name + camel2pascal(kind_val)
+            parts.append(f'\tcase "{kind_val}":')
+            parts.append(f"\t\tvar v {variant_name}")
+            parts.append("\t\tif err := json.Unmarshal(data, &v); err != nil {")
+            parts.append("\t\t\treturn err")
+            parts.append("\t\t}")
+            parts.append("\t\t*out = &v")
+        parts.append("\tdefault:")
+        parts.append(f'\t\treturn fmt.Errorf("unknown {name} variant: %q", header.Kind)')
+        parts.append("\t}")
+        parts.append("\treturn nil")
+        parts.append("}")
 
     return "\n".join(parts)
 
@@ -236,12 +243,12 @@ def has_pair_types(methods: list[dict]) -> bool:
     return False
 
 
-def generate_type(name: str, schema: dict[str, Any], union_types: set[str] | None = None) -> str:
+def generate_type(name: str, schema: dict[str, Any], union_types: set[str] | None = None, unmarshal_types: set[str] | None = None) -> str:
     """Generate a Go type definition from a JSON schema type"""
     if "oneOf" in schema:
         if all(typ.get("type") == "string" for typ in schema["oneOf"]):
             return generate_enum_type(name, schema["oneOf"])
-        return generate_union_type(name, schema)
+        return generate_union_type(name, schema, unmarshal_types)
     if schema.get("type") == "string":
         return generate_enum_type(name, [schema])
     if schema.get("type") == "object":
