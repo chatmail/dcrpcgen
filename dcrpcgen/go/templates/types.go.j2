@@ -1,15 +1,15 @@
 package deltachat
-
 {% if has_pairs or has_union_types %}
+
 import (
 	"encoding/json"
 {% if has_union_types %}
 	"fmt"
 {% endif %}
 )
-
 {% endif %}
 {% if has_pairs %}
+
 // Pair is a generic two-element tuple used for RPC methods that return two values.
 type Pair[A, B any] struct {
 	First  A
@@ -26,8 +26,8 @@ func (p *Pair[A, B]) UnmarshalJSON(data []byte) error {
 	}
 	return json.Unmarshal(raw[1], &p.Second)
 }
-
 {% endif %}
-{% for type_def in type_defs %}
-{{ type_def }}
+{% for name, schema in schemas.items() %}
+
+{{ generate_type(name, schema) }}
 {% endfor %}

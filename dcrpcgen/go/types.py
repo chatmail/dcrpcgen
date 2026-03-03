@@ -96,9 +96,9 @@ def _generate_unmarshal_json(
             lines.append(
                 f'\tif len(raw.{exported_name}) > 0 && string(raw.{exported_name}) != "null" {{'
             )
-            lines.append("\t\tvar err error")
-            lines.append(f"\t\ts.{exported_name}, err = unmarshal{base_type}(raw.{exported_name})")
-            lines.append("\t\tif err != nil {")
+            lines.append(
+                f"\t\tif err := unmarshal{base_type}(raw.{exported_name}, s.{exported_name}); err != nil {{"
+            )
             lines.append("\t\t\treturn err")
             lines.append("\t\t}")
             lines.append("\t}")
@@ -138,7 +138,7 @@ def generate_object_type(
         lines.append(fields)
     lines.append("}")
 
-    # Detect fields whose base type is a union interface → need custom UnmarshalJSON
+    # Detect fields whose base type is a union interface and need custom UnmarshalJSON
     union_props = {
         prop_name: prop_schema
         for prop_name, prop_schema in properties.items()

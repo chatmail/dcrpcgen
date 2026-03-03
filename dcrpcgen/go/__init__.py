@@ -37,9 +37,12 @@ def go_cmd(args: argparse.Namespace) -> None:
     }
 
     # Generate types.go
-    type_defs = [generate_type(name, schema, union_types) for name, schema in schemas.items()]
     uses_pairs = has_pair_types(methods)
     has_union_types = bool(union_types)
+
+    # Build a union-type-aware type generator closure
+    def _generate_type(name: str, schema: dict[str, Any]) -> str:
+        return generate_type(name, schema, union_types)
 
     path = folder / "types.go"
     with path.open("w", encoding="utf-8") as output:
@@ -47,7 +50,8 @@ def go_cmd(args: argparse.Namespace) -> None:
         template = get_template("types.go.j2")
         output.write(
             template.render(
-                type_defs=type_defs,
+                schemas=schemas,
+                generate_type=_generate_type,
                 has_pairs=uses_pairs,
                 has_union_types=has_union_types,
             )
