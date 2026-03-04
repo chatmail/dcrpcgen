@@ -1,0 +1,9 @@
+class {{ name }}(StrEnum):
+{% for schema in schemas %}
+{% if schema.get("description") %}
+{{ create_comment(schema["description"], "    ") -}}
+{% endif %}
+{% for val in schema["enum"] %}
+    {{ camel2snake(val) | upper }} = "{{ val }}"
+{% endfor %}
+{% endfor %}

@@ -4,7 +4,7 @@ import argparse
 from pathlib import Path
 from typing import Any
 
-from ..utils import add_subcommand
+from ..utils import add_subcommand, camel2snake
 from .templates import get_template
 from .types import generate_types
 from .utils import create_comment, decode_type, get_banner
@@ -21,8 +21,7 @@ def python_cmd(args: argparse.Namespace) -> None:
     folder = Path(args.folder)
     folder.mkdir(parents=True, exist_ok=True)
 
-    schemas = args.openrpc_spec["components"]["schemas"]
-    generate_types(folder, schemas)
+    generate_types(folder / "types.py", args.openrpc_spec["components"]["schemas"])
 
     path = folder / "rpc.py"
     with path.open("w", encoding="utf-8") as output:
@@ -36,32 +35,65 @@ def python_cmd(args: argparse.Namespace) -> None:
             )
         )
 
+    path = folder / "transport.py"
+    with path.open("w", encoding="utf-8") as output:
+        print(f"Generating {path}")
+        template = get_template("transport.py.j2")
+        output.write(template.render())
+
 
 def generate_method(method: dict[str, Any]) -> str:
-    """Generate a Python async RPC method"""
+    """Generate a Python RPC method"""
     assert method["paramStructure"] == "by-position"
     params = method["params"]
-    result_type, _ = decode_type(method["result"]["schema"])
+    params_types = {param["name"]: decode_type(param["schema"]) for param in params}
+    result_type = decode_type(method["result"]["schema"])
     name = method["name"]
+    tab = "    "
 
-    param_list = ", ".join(
-        f'{param["name"]}: {decode_type(param["schema"])[0]}' for param in params
+    # Build method signature with snake_case parameter names
+    param_sig = ", ".join(
+        f'{camel2snake(param["name"])}: {params_types[param["name"]]}' for param in params
     )
-    if param_list:
-        param_list = ", " + param_list
+    if param_sig:
+        param_sig = ", " + param_sig
 
-    call_args = ", ".join([f'"{name}"'] + [param["name"] for param in params])
+    text = f"{tab}def {name}(self{param_sig}) -> {result_type}:\n"
+    if "description" in method:
+        text += create_comment(method["description"], tab * 2, docstr=True)
 
+    # Build call arguments, wrapping complex types with _wrap()
+    _primitive_types = frozenset(
+        {
+            "bool",
+            "int",
+            "float",
+            "str",
+            "None",
+            "Optional[bool]",
+            "Optional[int]",
+            "Optional[float]",
+            "Optional[str]",
+            "list[bool]",
+            "list[int]",
+            "list[float]",
+            "list[str]",
+            "dict[str, str]",
+            "dict[str, int]",
+            "dict[str, bool]",
+        }
+    )
+    call_args = [f'"{name}"']
+    for param in params:
+        param_name = camel2snake(param["name"])
+        if params_types[param["name"]] in _primitive_types:
+            call_args.append(param_name)
+        else:
+            call_args.append(f"_wrap({param_name})")
+
+    stmt = f'self.transport.call({", ".join(call_args)})'
     if result_type == "None":
-        text = f"    async def {name}(self{param_list}) -> None:\n"
-        if "description" in method:
-            text += create_comment(method["description"].strip(), "        ")
-        text += f"        await self._transport.call({call_args})\n"
+        text += f"{tab * 2}{stmt}\n"
     else:
-        text = f"    async def {name}(self{param_list}) -> {result_type}:\n"
-        if "description" in method:
-            text += create_comment(method["description"].strip(), "        ")
-        text += (
-            f"        return cast({result_type}, await self._transport.call_result({call_args}))\n"
-        )
+        text += f"{tab * 2}return TypeAdapter({result_type}).validate_python({stmt})\n"
     return text

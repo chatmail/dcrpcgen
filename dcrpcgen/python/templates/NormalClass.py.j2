@@ -1,0 +1,30 @@
+class {{ name }}(BaseModel):
+{% if schema.get("description") %}
+{{ create_comment(schema["description"], "    ", docstr=True) -}}
+{% endif %}
+    model_config = _MODEL_CONFIG
+{% set required = schema.get("required", []) %}
+{% for prop_name, prop_schema in schema.get("properties", {}).items() %}
+{% if prop_name in required %}
+{% if prop_schema.get("description") %}
+{{ create_comment(prop_schema["description"], "    ") -}}
+{% endif %}
+{% if camel2snake(prop_name) != prop_name %}
+    {{ camel2snake(prop_name) }}: {{ decode_type(prop_schema) }} = Field(alias="{{ prop_name }}")
+{% else %}
+    {{ prop_name }}: {{ decode_type(prop_schema) }}
+{% endif %}
+{% endif %}
+{% endfor %}
+{% for prop_name, prop_schema in schema.get("properties", {}).items() %}
+{% if prop_name not in required %}
+{% if prop_schema.get("description") %}
+{{ create_comment(prop_schema["description"], "    ") -}}
+{% endif %}
+{% if camel2snake(prop_name) != prop_name %}
+    {{ camel2snake(prop_name) }}: {{ decode_type(prop_schema) }} = Field(default=None, alias="{{ prop_name }}")
+{% else %}
+    {{ prop_name }}: {{ decode_type(prop_schema) }} = None
+{% endif %}
+{% endif %}
+{% endfor %}
