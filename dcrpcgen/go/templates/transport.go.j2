@@ -11,3 +11,4 @@ type RpcTransport interface {
 	// CallResult requests the RPC server to call a function that does have a return value.
 	CallResult(ctx context.Context, result any, method string, params ...any) error
 }
+

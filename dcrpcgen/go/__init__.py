@@ -4,10 +4,10 @@ import argparse
 from pathlib import Path
 from typing import Any
 
-from ..utils import add_subcommand, snake2pascal
+from ..utils import add_subcommand
+from .methods import generate_method, method_returns_union
 from .templates import get_template
-from .types import generate_type, has_pair_types
-from .utils import create_comment, decode_type
+from .types import TypeGenerator
 
 
 def add_go_cmd(subparsers: argparse._SubParsersAction, base: argparse.ArgumentParser) -> None:
@@ -19,44 +19,21 @@ def go_cmd(args: argparse.Namespace) -> None:
     folder = Path(args.folder)
     folder.mkdir(parents=True, exist_ok=True)
 
-    schemas = args.openrpc_spec["components"]["schemas"]
     methods = args.openrpc_spec["methods"]
-
-    # Compute which schema names are discriminated union types (oneOf with objects)
-    union_types = {
-        name
-        for name, schema in schemas.items()
-        if "oneOf" in schema and not all(s.get("type") == "string" for s in schema["oneOf"])
-    }
+    typegen = TypeGenerator(args.openrpc_spec["components"]["schemas"], methods)
 
     # Generate types.go
-    uses_pairs = has_pair_types(methods)
-
-    # Compute which union types actually need an unmarshal helper
-    unmarshal_union_types = _compute_unmarshal_union_types(methods, schemas, union_types)
-
-    # Build a union-type-aware type generator closure
-    def _generate_type(name: str, schema: dict[str, Any]) -> str:
-        return generate_type(name, schema, union_types, unmarshal_union_types)
-
     path = folder / "types.go"
     with path.open("w", encoding="utf-8") as output:
         print(f"Generating {path}")
         template = get_template("types.go.j2")
-        output.write(
-            template.render(
-                schemas=schemas,
-                generate_type=_generate_type,
-                has_pairs=uses_pairs,
-                has_unmarshal_types=bool(unmarshal_union_types),
-            )
-        )
+        output.write(template.render(generator=typegen))
 
     # Build a union-type-aware method generator closure
     def _generate_method(method: dict[str, Any]) -> str:
-        return generate_method(method, union_types)
+        return generate_method(method, typegen.union_types)
 
-    has_union_return = any(_method_returns_union(m, union_types) for m in methods)
+    has_union_return = any(method_returns_union(m, typegen.union_types) for m in methods)
 
     # Generate rpc.go
     path = folder / "rpc.go"
@@ -83,160 +60,3 @@ def go_cmd(args: argparse.Namespace) -> None:
         print(f"Generating {path}")
         template = get_template("io_transport.go.j2")
         output.write(template.render())
-
-
-def _compute_unmarshal_union_types(
-    methods: list[dict[str, Any]],
-    schemas: dict[str, Any],
-    union_types: set[str],
-) -> set[str]:
-    """Return the set of union types that need an unmarshal helper.
-
-    A union type needs its helper when it is:
-    - returned directly, as an array element, or as a map value by any method, OR
-    - used as a field type inside a struct (because the struct's UnmarshalJSON calls the helper).
-    """
-    needed: set[str] = set()
-
-    # Methods that return union types
-    for method in methods:
-        result_schema = method.get("result", {}).get("schema", {})
-        base_type = decode_type(result_schema)[0].lstrip("*")
-        if base_type in union_types:
-            needed.add(base_type)
-        if result_schema.get("type") == "array" and isinstance(result_schema.get("items"), dict):
-            ref = result_schema["items"].get("$ref", "").removeprefix("#/components/schemas/")
-            if ref in union_types:
-                needed.add(ref)
-        if isinstance(result_schema.get("additionalProperties"), dict):
-            ref = (
-                result_schema["additionalProperties"]
-                .get("$ref", "")
-                .removeprefix("#/components/schemas/")
-            )
-            if ref in union_types:
-                needed.add(ref)
-
-    # Struct fields that are of a union type
-    for schema in schemas.values():
-        if schema.get("type") == "object":
-            for prop_schema in schema.get("properties", {}).values():
-                base_type = decode_type(prop_schema)[0].lstrip("*")
-                if base_type in union_types:
-                    needed.add(base_type)
-
-    return needed
-
-
-def _method_returns_union(method: dict[str, Any], union_types: set[str]) -> bool:
-    """Return True if the method's result type is (or is an array/map of) a union type."""
-    result_schema = method.get("result", {}).get("schema", {})
-    result_type, _ = decode_type(result_schema)
-    if result_type.lstrip("*") in union_types:
-        return True
-    if result_schema.get("type") == "array" and isinstance(result_schema.get("items"), dict):
-        item_ref = result_schema["items"].get("$ref", "").removeprefix("#/components/schemas/")
-        if item_ref in union_types:
-            return True
-    if isinstance(result_schema.get("additionalProperties"), dict):
-        val_ref = (
-            result_schema["additionalProperties"]
-            .get("$ref", "")
-            .removeprefix("#/components/schemas/")
-        )
-        if val_ref in union_types:
-            return True
-    return False
-
-
-def generate_method(method: dict[str, Any], union_types: set[str] | None = None) -> str:
-    """Generate a Go RPC method on the Rpc struct"""
-    union_types = union_types or set()
-    assert method["paramStructure"] == "by-position"
-    params = method["params"]
-    result_schema = method["result"]["schema"]
-    result_type, _ = decode_type(result_schema)
-    name = method["name"]
-    go_name = snake2pascal(name)
-
-    text = ""
-    if "description" in method:
-        text += create_comment(method["description"].strip())
-
-    param_list = ", ".join(f"{param['name']} {decode_type(param['schema'])[0]}" for param in params)
-    call_args = ", ".join([f'"{name}"'] + [param["name"] for param in params])
-
-    if result_type == "void":
-        text += f"func (rpc *Rpc) {go_name}({param_list}) error {{\n"
-        text += f"\treturn rpc.Transport.Call(rpc.Context, {call_args})\n"
-    elif result_type.lstrip("*") in union_types:
-        # Return type is a union interface; use json.RawMessage for unmarshaling
-        bare_type = result_type.lstrip("*")
-        text += f"func (rpc *Rpc) {go_name}({param_list}) ({result_type}, error) {{\n"
-        text += "\tvar raw json.RawMessage\n"
-        text += (
-            f"\tif err := rpc.Transport.CallResult(rpc.Context, &raw, {call_args}); err != nil {{\n"
-        )
-        text += "\t\treturn nil, err\n"
-        text += "\t}\n"
-        text += f"\tvar result {result_type}\n"
-        text += f"\terr := unmarshal{bare_type}(raw, &result)\n"
-        text += "\treturn result, err\n"
-    elif (
-        result_schema.get("type") == "array"
-        and isinstance(result_schema.get("items"), dict)
-        and result_schema["items"].get("$ref", "").removeprefix("#/components/schemas/")
-        in union_types
-    ):
-        # Return type is []UnionType; unmarshal each element individually
-        item_type = result_schema["items"]["$ref"].removeprefix("#/components/schemas/")
-        text += f"func (rpc *Rpc) {go_name}({param_list}) ([]{item_type}, error) {{\n"
-        text += "\tvar rawList []json.RawMessage\n"
-        text += (
-            f"\tif err := rpc.Transport.CallResult(rpc.Context, &rawList, {call_args}); "
-            "err != nil {\n"
-        )
-        text += "\t\treturn nil, err\n"
-        text += "\t}\n"
-        text += f"\tresult := make([]{item_type}, len(rawList))\n"
-        text += "\tfor i, raw := range rawList {\n"
-        text += f"\t\tif err := unmarshal{item_type}(raw, &result[i]); err != nil {{\n"
-        text += "\t\t\treturn nil, err\n"
-        text += "\t\t}\n"
-        text += "\t}\n"
-        text += "\treturn result, nil\n"
-    elif (
-        isinstance(result_schema.get("additionalProperties"), dict)
-        and result_schema["additionalProperties"]
-        .get("$ref", "")
-        .removeprefix("#/components/schemas/")
-        in union_types
-    ):
-        # Return type is map[string]UnionType; unmarshal each value individually
-        val_type = result_schema["additionalProperties"]["$ref"].removeprefix(
-            "#/components/schemas/"
-        )
-        text += f"func (rpc *Rpc) {go_name}({param_list}) (map[string]{val_type}, error) {{\n"
-        text += "\tvar rawMap map[string]json.RawMessage\n"
-        text += (
-            f"\tif err := rpc.Transport.CallResult(rpc.Context, &rawMap, {call_args}); "
-            "err != nil {\n"
-        )
-        text += "\t\treturn nil, err\n"
-        text += "\t}\n"
-        text += f"\tresult := make(map[string]{val_type}, len(rawMap))\n"
-        text += "\tfor k, raw := range rawMap {\n"
-        text += f"\t\tvar val {val_type}\n"
-        text += f"\t\tif err := unmarshal{val_type}(raw, &val); err != nil {{\n"
-        text += "\t\t\treturn nil, err\n"
-        text += "\t\t}\n"
-        text += "\t\tresult[k] = val\n"
-        text += "\t}\n"
-        text += "\treturn result, nil\n"
-    else:
-        text += f"func (rpc *Rpc) {go_name}({param_list}) ({result_type}, error) {{\n"
-        text += f"\tvar result {result_type}\n"
-        text += f"\terr := rpc.Transport.CallResult(rpc.Context, &result, {call_args})\n"
-        text += "\treturn result, err\n"
-    text += "}"
-    return text

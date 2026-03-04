@@ -1,0 +1,13 @@
+func (rpc *Rpc) {{ name }}({{ param_list }}) ([]{{ item_type }}, error) {
+	var rawList []json.RawMessage
+	if err := rpc.Transport.CallResult(rpc.Context, &rawList, {{ call_args }}); err != nil {
+		return nil, err
+	}
+	result := make([]{{ item_type }}, len(rawList))
+	for i, raw := range rawList {
+		if err := unmarshal{{ item_type }}(raw, &result[i]); err != nil {
+			return nil, err
+		}
+	}
+	return result, nil
+}

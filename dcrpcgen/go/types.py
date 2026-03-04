@@ -6,7 +6,7 @@ from ..utils import camel2pascal
 from .utils import create_comment, decode_type
 
 
-def generate_enum_type(name: str, schemas: list[dict]) -> str:
+def _generate_enum_type(name: str, schemas: list[dict]) -> str:
     """Generate a Go string enum type from oneOf string schemas or a single string schema"""
     lines = []
     lines.append(f"type {name} string\n")
@@ -22,7 +22,7 @@ def generate_enum_type(name: str, schemas: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def generate_struct_fields(
+def _generate_struct_fields(
     properties: dict[str, Any],
     required_fields: set[str],
     union_types: set[str] | None = None,
@@ -117,7 +117,7 @@ def _generate_unmarshal_json(
     return lines
 
 
-def generate_object_type(
+def _generate_object_type(
     name: str, schema: dict[str, Any], union_types: set[str] | None = None
 ) -> str:
     """Generate a Go struct type from an object schema.
@@ -133,7 +133,7 @@ def generate_object_type(
         for cline in create_comment(schema["description"]).splitlines():
             lines.append(cline)
     lines.append(f"type {name} struct {{")
-    fields = generate_struct_fields(properties, required_fields, union_types)
+    fields = _generate_struct_fields(properties, required_fields, union_types)
     if fields:
         lines.append(fields)
     lines.append("}")
@@ -166,7 +166,7 @@ def generate_variant_struct(parent_name: str, variant: dict[str, Any]) -> str:
         for cline in create_comment(variant["description"]).splitlines():
             lines.append(cline)
     lines.append(f"type {variant_name} struct {{")
-    fields = generate_struct_fields(properties, required_fields)
+    fields = _generate_struct_fields(properties, required_fields)
     if fields:
         lines.append(fields)
     lines.append("}")
@@ -175,7 +175,7 @@ def generate_variant_struct(parent_name: str, variant: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def generate_union_type(
+def _generate_union_type(
     name: str, schema: dict[str, Any], unmarshal_types: set[str] | None = None
 ) -> str:
     """Generate a Go interface + per-variant structs + unmarshal helper for a union type.
@@ -227,35 +227,89 @@ def generate_union_type(
     return "\n".join(parts)
 
 
-def has_pair_types(methods: list[dict]) -> bool:
-    """Check if any method return values or parameters use the Pair[A, B] tuple type"""
+def _compute_unmarshal_union_types(
+    methods: list[dict[str, Any]],
+    schemas: dict[str, Any],
+    union_types: set[str],
+) -> set[str]:
+    """Return the set of union types that need an unmarshal helper.
 
-    def check_schema(s: dict) -> bool:
-        return s.get("type") == "array" and isinstance(s.get("items"), list)
+    A union type needs its helper when it is:
+    - returned directly, as an array element, or as a map value by any method, OR
+    - used as a field type inside a struct (because the struct's UnmarshalJSON calls the helper).
+    """
+    needed: set[str] = set()
 
+    # Methods that return union types
     for method in methods:
         result_schema = method.get("result", {}).get("schema", {})
-        if check_schema(result_schema):
-            return True
-        for param in method.get("params", []):
-            if check_schema(param.get("schema", {})):
+        base_type = decode_type(result_schema)[0].lstrip("*")
+        if base_type in union_types:
+            needed.add(base_type)
+        if result_schema.get("type") == "array" and isinstance(result_schema.get("items"), dict):
+            ref = result_schema["items"].get("$ref", "").removeprefix("#/components/schemas/")
+            if ref in union_types:
+                needed.add(ref)
+        if isinstance(result_schema.get("additionalProperties"), dict):
+            ref = (
+                result_schema["additionalProperties"]
+                .get("$ref", "")
+                .removeprefix("#/components/schemas/")
+            )
+            if ref in union_types:
+                needed.add(ref)
+
+    # Struct fields that are of a union type
+    for schema in schemas.values():
+        if schema.get("type") == "object":
+            for prop_schema in schema.get("properties", {}).values():
+                base_type = decode_type(prop_schema)[0].lstrip("*")
+                if base_type in union_types:
+                    needed.add(base_type)
+
+    return needed
+
+
+class TypeGenerator:
+    def __init__(self, schemas: dict[str, Any], methods: list[dict[str, Any]]) -> None:
+        self.schemas = schemas
+        self.methods = methods
+        # Compute which schema names are discriminated union types (oneOf with objects)
+        self.union_types: set[str] = {
+            name
+            for name, schema in schemas.items()
+            if "oneOf" in schema and not all(s.get("type") == "string" for s in schema["oneOf"])
+        }
+        # Compute which union types actually need an unmarshal helper
+        self.unmarshal_types = _compute_unmarshal_union_types(methods, schemas, self.union_types)
+
+    def generate_type(self, name: str, schema: dict[str, Any]) -> str:
+        """Generate a Go type definition from a JSON schema type"""
+        if "oneOf" in schema:
+            if all(typ.get("type") == "string" for typ in schema["oneOf"]):
+                return _generate_enum_type(name, schema["oneOf"])
+            return _generate_union_type(name, schema, self.unmarshal_types)
+        if schema.get("type") == "string":
+            return _generate_enum_type(name, [schema])
+        if schema.get("type") == "object":
+            return _generate_object_type(name, schema, self.union_types)
+        raise ValueError(f"Unknown schema: {schema}")
+
+    def has_pair_types(self) -> bool:
+        """Return True if any method's return values or parameters use the Pair[A, B] tuple type, return False otherwise"""
+
+        def check_schema(s: dict) -> bool:
+            return s.get("type") == "array" and isinstance(s.get("items"), list)
+
+        for method in self.methods:
+            result_schema = method.get("result", {}).get("schema", {})
+            if check_schema(result_schema):
                 return True
-    return False
+            for param in method.get("params", []):
+                if check_schema(param.get("schema", {})):
+                    return True
+        return False
 
-
-def generate_type(
-    name: str,
-    schema: dict[str, Any],
-    union_types: set[str] | None = None,
-    unmarshal_types: set[str] | None = None,
-) -> str:
-    """Generate a Go type definition from a JSON schema type"""
-    if "oneOf" in schema:
-        if all(typ.get("type") == "string" for typ in schema["oneOf"]):
-            return generate_enum_type(name, schema["oneOf"])
-        return generate_union_type(name, schema, unmarshal_types)
-    if schema.get("type") == "string":
-        return generate_enum_type(name, [schema])
-    if schema.get("type") == "object":
-        return generate_object_type(name, schema, union_types)
-    raise ValueError(f"Unknown schema: {schema}")
+    def has_unmarshal_types(self) -> bool:
+        """Return True if there is union types that need an unmarshal helper"""
+        return bool(self.unmarshal_types)
