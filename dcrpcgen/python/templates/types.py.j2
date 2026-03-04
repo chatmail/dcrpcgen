@@ -1,0 +1,78 @@
+{{ banner }}
+# ruff: noqa: N801
+
+from __future__ import annotations
+
+import dataclasses
+import enum
+
+from typing import Optional, Union
+
+{% for name, schema in schemas.items() %}
+{% if "oneOf" in schema %}
+{% set is_str_enum = schema["oneOf"] | selectattr("type", "equalto", "string") | list | length == schema["oneOf"] | length %}
+{% if is_str_enum %}
+
+
+class {{ name }}(str, enum.Enum):
+{% for variant in schema["oneOf"] %}
+{% if variant.get("description") %}
+{{ create_inline_comment(variant["description"], "    ") -}}
+{% endif %}
+{% for val in variant["enum"] %}
+    {{ val }} = "{{ val }}"
+{% endfor %}
+{% endfor %}
+{% else %}
+{% for variant in schema["oneOf"] %}
+
+
+@dataclasses.dataclass(kw_only=True)
+class {{ get_variant_name(name, variant) }}:
+{% if variant.get("description") %}
+{{ create_comment(variant["description"], "    ") -}}
+{% endif %}
+{% set required = variant.get("required", []) %}
+{% for prop_name, prop_schema in variant.get("properties", {}).items() %}
+{% if prop_name in required %}
+    {{ prop_name }}: {{ decode_type(prop_schema)[0] }}
+{% endif %}
+{% endfor %}
+{% for prop_name, prop_schema in variant.get("properties", {}).items() %}
+{% if prop_name not in required %}
+    {{ prop_name }}: {{ decode_optional_type(prop_schema) }} = None
+{% endif %}
+{% endfor %}
+{% endfor %}
+
+
+{{ name }} = Union[{% for variant in schema["oneOf"] %}{{ get_variant_name(name, variant) }}{% if not loop.last %}, {% endif %}{% endfor %}]
+{% endif %}
+{% elif schema.get("type") == "string" %}
+
+
+class {{ name }}(str, enum.Enum):
+{% for val in schema["enum"] %}
+    {{ val }} = "{{ val }}"
+{% endfor %}
+{% elif schema.get("type") == "object" %}
+
+
+@dataclasses.dataclass(kw_only=True)
+class {{ name }}:
+{% if schema.get("description") %}
+{{ create_comment(schema["description"], "    ") -}}
+{% endif %}
+{% set required = schema.get("required", []) %}
+{% for prop_name, prop_schema in schema.get("properties", {}).items() %}
+{% if prop_name in required %}
+    {{ prop_name }}: {{ decode_type(prop_schema)[0] }}
+{% endif %}
+{% endfor %}
+{% for prop_name, prop_schema in schema.get("properties", {}).items() %}
+{% if prop_name not in required %}
+    {{ prop_name }}: {{ decode_optional_type(prop_schema) }} = None
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}

@@ -1,0 +1,30 @@
+{{ banner }}
+
+from __future__ import annotations
+
+from typing import Any, cast
+
+from .types import *
+
+
+class RpcTransport:
+    """Abstract base for Delta Chat RPC transport implementations."""
+
+    async def call(self, method: str, *params: Any) -> None:
+        """Call an RPC method that does not return a value."""
+        raise NotImplementedError
+
+    async def call_result(self, method: str, *params: Any) -> Any:
+        """Call an RPC method and return its result."""
+        raise NotImplementedError
+
+
+class Rpc:
+    """Delta Chat RPC client."""
+
+    def __init__(self, transport: RpcTransport) -> None:
+        self._transport = transport
+
+{% for method in methods %}
+{{ generate_method(method) }}
+{% endfor %}
