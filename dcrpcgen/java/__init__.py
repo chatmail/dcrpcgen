@@ -1,10 +1,10 @@
 """Java code generation"""
 
-from argparse import Namespace
+import argparse
 from pathlib import Path
 from typing import Any
 
-from ..utils import snake2camel
+from ..utils import add_subcommand, snake2camel
 from .templates import get_template
 from .types import generate_types
 from .utils import create_comment, decode_type, get_banner
@@ -12,7 +12,11 @@ from .utils import create_comment, decode_type, get_banner
 BANNER = get_banner()
 
 
-def java_cmd(args: Namespace) -> None:
+def add_java_cmd(subparsers: argparse._SubParsersAction, base: argparse.ArgumentParser) -> None:
+    add_subcommand(subparsers, base, java_cmd)
+
+
+def java_cmd(args: argparse.Namespace) -> None:
     """Generate JSON-RPC client for the Java programming language"""
     root_package = "chat.delta"
     root_folder = Path(args.folder, *root_package.split("."))
@@ -54,11 +58,7 @@ def java_cmd(args: Namespace) -> None:
     with path.open("w", encoding="utf-8") as output:
         print(f"Generating {path}")
         template = get_template("BaseTransport.java.j2")
-        output.write(
-            template.render(
-                package=rpc_package, util_package=util_package, banner=BANNER
-            )
-        )
+        output.write(template.render(package=rpc_package, util_package=util_package, banner=BANNER))
 
 
 def generate_method(method: dict[str, Any]) -> str:
@@ -71,13 +71,9 @@ def generate_method(method: dict[str, Any]) -> str:
     if "description" in method:
         text += create_comment(method["description"], "  ")
     text += f"  public {result_type} {snake2camel(name)}("
-    text += ", ".join(
-        decode_type(param["schema"])[0] + " " + param["name"] for param in params
-    )
+    text += ", ".join(decode_type(param["schema"])[0] + " " + param["name"] for param in params)
     text += ") throws RpcException {\n"
-    args = ", ".join(
-        [f'"{name}"'] + [f'mapper.valueToTree({param["name"]})' for param in params]
-    )
+    args = ", ".join([f'"{name}"'] + [f'mapper.valueToTree({param["name"]})' for param in params])
     if result_type == "void":
         text += f"    transport.call({args});\n"
     else:

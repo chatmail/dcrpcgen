@@ -1,0 +1,78 @@
+"""Utilities for Go code generation."""
+
+from typing import Any
+
+
+def create_comment(text: str, indentation: str = "") -> str:
+    """Generate a Go comment"""
+    lines = text.strip().splitlines()
+    result = ""
+    for line in lines:
+        stripped = line.strip()
+        if stripped:
+            result += f"{indentation}// {stripped}\n"
+        else:
+            result += f"{indentation}//\n"
+    return result
+
+
+def decode_type(property_desc: dict[str, Any]) -> tuple[str, bool]:
+    """Decode a JSON schema type descriptor to a Go type string.
+
+    Returns (go_type, is_optional) where is_optional means the field can be null/absent.
+    """
+    if "anyOf" in property_desc:
+        assert len(property_desc["anyOf"]) == 2
+        assert property_desc["anyOf"][1] == {"type": "null"}
+        inner = property_desc["anyOf"][0]
+        inner_type = decode_type(inner)[0]
+        return f"*{inner_type}", True
+
+    if "$ref" in property_desc:
+        assert property_desc["$ref"].startswith("#/components/schemas/")
+        typ = property_desc["$ref"].removeprefix("#/components/schemas/")
+        return typ, False
+
+    prop_type = property_desc.get("type")
+
+    if prop_type == "null":
+        return "void", False  # only for function return type
+
+    # Handle nullable types represented as ["type", "null"]
+    if isinstance(prop_type, list):
+        assert len(prop_type) == 2
+        assert "null" in prop_type
+        inner_type_name = next(t for t in prop_type if t != "null")
+        inner_desc = dict(property_desc)
+        inner_desc["type"] = inner_type_name
+        inner_go_type = decode_type(inner_desc)[0]
+        return f"*{inner_go_type}", True
+
+    if prop_type == "boolean":
+        return "bool", False
+    if prop_type == "integer":
+        fmt = property_desc.get("format", "")
+        if fmt in ("uint32", "int32", "uint16", "uint64", "int64", "uint"):
+            return fmt, False
+        return "int", False
+    if prop_type == "number":
+        return "float64", False
+    if prop_type == "string":
+        return "string", False
+    if prop_type == "array":
+        items = property_desc["items"]
+        if isinstance(items, list):
+            # Tuple type
+            count = len(items)
+            if count == 2:
+                typ1 = decode_type(items[0])[0]
+                typ2 = decode_type(items[1])[0]
+                return f"Pair[{typ1}, {typ2}]", False
+            raise ValueError(f"Tuple not implemented for {count} elements: {property_desc}")
+        items_type = decode_type(items)[0]
+        return f"[]{items_type}", False
+    if "additionalProperties" in property_desc:
+        value_type = decode_type(property_desc["additionalProperties"])[0]
+        return f"map[string]{value_type}", False
+
+    raise ValueError(f"Not supported: {property_desc!r}")

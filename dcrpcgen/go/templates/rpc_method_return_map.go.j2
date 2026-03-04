@@ -1,0 +1,15 @@
+func (rpc *Rpc) {{ name }}({{ param_list }}) (map[string]{{ val_type }}, error) {
+	var rawMap map[string]json.RawMessage
+	if err := rpc.Transport.CallResult(rpc.Context, &rawMap, {{ call_args }}); err != nil {
+		return nil, err
+	}
+	result := make(map[string]{{ val_type }}, len(rawMap))
+	for k, raw := range rawMap {
+		var val {{ val_type }}
+		if err := unmarshal{{ val_type }}(raw, &val); err != nil {
+			return nil, err
+		}
+		result[k] = val
+	}
+	return result, nil
+}
