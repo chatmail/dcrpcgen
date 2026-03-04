@@ -1,0 +1,9 @@
+func (rpc *Rpc) {{ name }}({{ param_list }}) ({{ result_type }}, error) {
+	var raw json.RawMessage
+	if err := rpc.Transport.CallResult(rpc.Context, &raw, {{ call_args }}); err != nil {
+		return nil, err
+	}
+	var result {{ result_type }}
+	err := unmarshal{{ result_type.lstrip("*") }}(raw, &result)
+	return result, err
+}

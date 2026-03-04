@@ -1,10 +1,10 @@
 """Java code generation"""
 
-from argparse import Namespace
+import argparse
 from pathlib import Path
 from typing import Any
 
-from ..utils import snake2camel
+from ..utils import add_subcommand, snake2camel
 from .templates import get_template
 from .types import generate_types
 from .utils import create_comment, decode_type, get_banner
@@ -12,7 +12,11 @@ from .utils import create_comment, decode_type, get_banner
 BANNER = get_banner()
 
 
-def java_cmd(args: Namespace) -> None:
+def add_java_cmd(subparsers: argparse._SubParsersAction, base: argparse.ArgumentParser) -> None:
+    add_subcommand(subparsers, base, java_cmd)
+
+
+def java_cmd(args: argparse.Namespace) -> None:
     """Generate JSON-RPC client for the Java programming language"""
     root_package = "chat.delta"
     root_folder = Path(args.folder, *root_package.split("."))

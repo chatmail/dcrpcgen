@@ -4,26 +4,10 @@ import argparse
 import json
 import subprocess
 from pathlib import Path
-from typing import Callable
 
 from ._version import __version__
-from .java import java_cmd
-
-
-def add(
-    subparsers: argparse._SubParsersAction,
-    base: argparse.ArgumentParser,
-    func: Callable,
-) -> argparse.ArgumentParser:
-    """Add function as CLI subcommand"""
-    name = func.__name__
-    assert name.endswith("_cmd")
-    name = name[:-4]
-    assert func.__doc__
-    doc = (func.__doc__).strip()
-    p = subparsers.add_parser(name, description=doc, help=doc, parents=[base])
-    p.set_defaults(func=func)
-    return p
+from .go import add_go_cmd
+from .java import add_java_cmd
 
 
 def get_schema(filename: str) -> dict:
@@ -64,8 +48,8 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument("-v", "--version", action="version", version=__version__)
     subparsers = parser.add_subparsers(title="subcommands")
 
-    for generator in [java_cmd]:
-        add(subparsers, base, generator)
+    for add_generator in [add_java_cmd, add_go_cmd]:
+        add_generator(subparsers, base)
 
     return parser
 

@@ -1,0 +1,19 @@
+package deltachat
+
+import (
+	"context"
+{% if has_union_return %}
+	"encoding/json"
+{% endif %}
+)
+
+// Delta Chat RPC client. This is the root of the API.
+type Rpc struct {
+	// Context to be used on calls to Transport.CallResult() and Transport.Call()
+	Context   context.Context
+	Transport RpcTransport
+}
+{% for method in methods %}
+
+{{ generate_method(method) }}
+{% endfor %}
