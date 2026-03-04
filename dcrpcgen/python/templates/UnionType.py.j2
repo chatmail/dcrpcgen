@@ -1,0 +1,5 @@
+{% for typ in schema["oneOf"] %}
+  {{- generate_subtype(typ, name) }}
+{% endfor -%}
+{% if "description" in schema %}{{ create_comment(schema["description"]) + "\n" }}{% endif -%}
+{{ name }}: TypeAlias = {{ get_union_type(schema["oneOf"], name) }}
