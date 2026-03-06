@@ -159,7 +159,8 @@ def generate_variant_struct(parent_name: str, variant: dict[str, Any]) -> str:
     kind_val = variant["properties"]["kind"]["enum"][0]
     variant_name = parent_name + camel2pascal(kind_val)
     required_fields = set(variant.get("required", []))
-    properties = variant.get("properties", {})
+    # Exclude the "kind" discriminator field; it is injected automatically by MarshalJSON
+    properties = {k: v for k, v in variant.get("properties", {}).items() if k != "kind"}
 
     lines = []
     if "description" in variant:
@@ -172,6 +173,13 @@ def generate_variant_struct(parent_name: str, variant: dict[str, Any]) -> str:
     lines.append("}")
     lines.append(f"func (*{variant_name}) is{parent_name}Variant() {{}}")
     lines.append(f'func (*{variant_name}) GetKind() string {{ return "{kind_val}" }}')
+    lines.append(f"func (v *{variant_name}) MarshalJSON() ([]byte, error) {{")
+    lines.append(f"\ttype alias {variant_name}")
+    lines.append("\treturn json.Marshal(struct {")
+    lines.append('\t\tKind string `json:"kind"`')
+    lines.append("\t\talias")
+    lines.append(f'\t}}{{Kind: "{kind_val}", alias: alias(*v)}})')
+    lines.append("}")
     return "\n".join(lines)
 
 
@@ -294,6 +302,10 @@ class TypeGenerator:
         if schema.get("type") == "object":
             return _generate_object_type(name, schema, self.union_types)
         raise ValueError(f"Unknown schema: {schema}")
+
+    def has_union_types(self) -> bool:
+        """Return True if there are any discriminated union types (oneOf with objects)"""
+        return bool(self.union_types)
 
     def has_pair_types(self) -> bool:
         """Return True if any method's return values or parameters use the Pair[A, B] tuple type, return False otherwise"""
