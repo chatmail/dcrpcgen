@@ -1,0 +1,34 @@
+{{ banner }}
+"""JSON-RPC API definition."""
+
+from __future__ import annotations
+
+from typing import Any, Optional
+
+from pydantic import TypeAdapter
+
+from .transport import RpcTransport
+from .types import *  # noqa: F401,F403
+
+
+class Rpc:
+    """Access to the chatmail JSON-RPC API."""
+
+    def __init__(self, transport: RpcTransport) -> None:
+        self.transport = transport
+
+{% for method in methods %}
+{{ generate_method(method) }}
+{% endfor %}
+
+def _wrap(arg: Any) -> Any:
+    """Recursively serialize pydantic models to JSON-serializable dicts."""
+    from pydantic import BaseModel
+
+    if isinstance(arg, BaseModel):
+        return arg.model_dump(by_alias=True)
+    if isinstance(arg, dict):
+        return {key: _wrap(val) for key, val in arg.items()}
+    if isinstance(arg, list):
+        return [_wrap(elem) for elem in arg]
+    return arg

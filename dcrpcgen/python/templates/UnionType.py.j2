@@ -1,0 +1,9 @@
+{% for variant in schema["oneOf"] %}
+{{ generate_variant(variant, name) }}
+
+
+{% endfor %}
+{% if schema.get("description") %}
+{{ create_comment(schema["description"]) -}}
+{% endif %}
+{{ name }} = Annotated[Union[{% for variant in schema["oneOf"] %}{{ get_variant_class_name(name, variant) }}{% if not loop.last %}, {% endif %}{% endfor %}], Field(discriminator="kind")]

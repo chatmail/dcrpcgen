@@ -42,7 +42,7 @@ dcrpcgen = "dcrpcgen.main:main"
 version_file = "dcrpcgen/_version.py"
 
 [tool.setuptools]
-packages = ["dcrpcgen"]
+packages = ["dcrpcgen", "dcrpcgen.go", "dcrpcgen.go.templates", "dcrpcgen.java", "dcrpcgen.java.templates", "dcrpcgen.python", "dcrpcgen.python.templates"]
 
 [tool.black]
 line-length = 100
