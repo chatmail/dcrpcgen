@@ -26,8 +26,7 @@ def go_cmd(args: argparse.Namespace) -> None:
     path = folder / "types.go"
     with path.open("w", encoding="utf-8") as output:
         print(f"Generating {path}")
-        template = get_template("types.go.j2")
-        output.write(template.render(generator=typegen))
+        output.write(get_template("types.go.j2").render(generator=typegen))
 
     # Build a union-type-aware method generator closure
     def _generate_method(method: dict[str, Any]) -> str:
@@ -48,15 +47,19 @@ def go_cmd(args: argparse.Namespace) -> None:
             )
         )
 
+    # Generate const.go
+    path = folder / "const.go"
+    with path.open("w", encoding="utf-8") as output:
+        print(f"Generating {path}")
+        output.write(get_template("const.go.j2").render())
+
     # Generate transport-related code
     path = folder / "transport.go"
     with path.open("w", encoding="utf-8") as output:
         print(f"Generating {path}")
-        template = get_template("transport.go.j2")
-        output.write(template.render())
+        output.write(get_template("transport.go.j2").render())
 
     path = folder / "io_transport.go"
     with path.open("w", encoding="utf-8") as output:
         print(f"Generating {path}")
-        template = get_template("io_transport.go.j2")
-        output.write(template.render())
+        output.write(get_template("io_transport.go.j2").render())
