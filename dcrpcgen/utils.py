@@ -28,6 +28,7 @@ def camel2pascal(name: str) -> str:
     """Capitalize first letter of a camelCase name to make it PascalCase"""
     if not name:
         return name
+    name = snake2camel(name)
     return name[0].upper() + name[1:]
 
 
