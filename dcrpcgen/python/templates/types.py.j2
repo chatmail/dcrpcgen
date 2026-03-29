@@ -1,0 +1,16 @@
+{{ banner }}
+"""Data classes and types from the JSON-RPC."""
+
+from __future__ import annotations
+
+from enum import StrEnum
+from typing import Annotated, Literal, Optional, Union
+
+from pydantic import BaseModel, ConfigDict, Field
+
+_MODEL_CONFIG = ConfigDict(populate_by_name=True)
+
+{% for item in items %}
+
+{{ item }}
+{% endfor %}
