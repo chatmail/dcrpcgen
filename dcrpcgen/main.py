@@ -8,6 +8,7 @@ from pathlib import Path
 from ._version import __version__
 from .go import add_go_cmd
 from .java import add_java_cmd
+from .python import add_python_cmd
 
 
 def get_schema(filename: str) -> dict:
@@ -48,7 +49,7 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument("-v", "--version", action="version", version=__version__)
     subparsers = parser.add_subparsers(title="subcommands")
 
-    for add_generator in [add_java_cmd, add_go_cmd]:
+    for add_generator in [add_java_cmd, add_go_cmd, add_python_cmd]:
         add_generator(subparsers, base)
 
     return parser
