@@ -96,11 +96,13 @@ def _generate_unmarshal_json(
             lines.append(
                 f'\tif len(raw.{exported_name}) > 0 && string(raw.{exported_name}) != "null" {{'
             )
+            lines.append(f"\t\tvar obj {base_type}")
             lines.append(
-                f"\t\tif err := unmarshal{base_type}(raw.{exported_name}, s.{exported_name}); err != nil {{"
+                f"\t\tif err := unmarshal{base_type}(raw.{exported_name}, &obj); err != nil {{"
             )
             lines.append("\t\t\treturn err")
             lines.append("\t\t}")
+            lines.append(f"\t\ts.{exported_name} = &obj")
             lines.append("\t}")
         else:
             err_decl = ":=" if first_union else "="
