@@ -67,6 +67,8 @@ def main(args=None) -> None:
     if not hasattr(args, "openrpc_spec") or not args.openrpc_spec:
         cmd = "deltachat-rpc-server"
         print("WARNING: no schema file provided, trying to generate it using", cmd)
+        version = subprocess.run([cmd, "--version"], capture_output=True, check=True).stderr
+        print(f"{cmd} {version.decode()}")
         args.openrpc_spec = json.loads(
             subprocess.run([cmd, "--openrpc"], capture_output=True, check=True).stdout
         )

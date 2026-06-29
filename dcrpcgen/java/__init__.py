@@ -54,10 +54,10 @@ def java_cmd(args: argparse.Namespace) -> None:
         template = get_template("RpcException.java.j2")
         output.write(template.render(package=rpc_package, banner=BANNER))
 
-    path = rpc_folder / "BaseTransport.java"
+    path = rpc_folder / "BaseRpcTransport.java"
     with path.open("w", encoding="utf-8") as output:
         print(f"Generating {path}")
-        template = get_template("BaseTransport.java.j2")
+        template = get_template("BaseRpcTransport.java.j2")
         output.write(template.render(package=rpc_package, util_package=util_package, banner=BANNER))
 
 
