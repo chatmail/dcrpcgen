@@ -900,7 +900,7 @@
     },
     {
       "name": "add_or_update_transport",
-      "description": " Configures a new email account using the provided parameters\n and adds it as a transport.\n\n If the email address is the same as an existing transport,\n then this existing account will be reconfigured instead of a new one being added.\n\n This function stops and starts IO as needed.\n\n Usually it will be enough to only set `addr` and `password`,\n and all the other settings will be autoconfigured.\n\n During configuration, ConfigureProgress events are emitted;\n they indicate a successful configuration as well as errors\n and may be used to create a progress bar.\n This function will return after configuration is finished.\n\n If configuration is successful,\n the working server parameters will be saved\n and used for connecting to the server.\n The parameters entered by the user will be saved separately\n so that they can be prefilled when the user opens the server-configuration screen again.\n\n See also:\n - [Self::is_configured()] to check whether there is\n   at least one working transport.\n - [Self::add_transport_from_qr()] to add a transport\n   from a server encoded in a QR code.\n - [Self::list_transports()] to get a list of all configured transports.\n - [Self::delete_transport()] to remove a transport.",
+      "description": " Configures a new email account using the provided parameters\n and adds it as a transport.\n\n If the email address is the same as an existing transport,\n then this existing account will be reconfigured instead of a new one being added.\n\n This function stops and starts IO as needed.\n\n Usually it will be enough to only set `addr` and `password`,\n and all the other settings will be autoconfigured.\n\n During configuration, ConfigureProgress events are emitted;\n they indicate a successful configuration as well as errors\n and may be used to create a progress bar.\n This function will return after configuration is finished.\n\n If configuration is successful,\n the working server parameters will be saved\n and used for connecting to the server.\n The parameters entered by the user will be saved separately\n so that they can be prefilled when the user opens the server-configuration screen again.\n\n See also:\n - [Self::is_configured()] to check whether there is\n   at least one working transport.\n - [Self::add_transport_from_qr()] to add a transport\n   from a server encoded in a QR code.\n - [Self::list_transports()] to get a list of all configured transports.\n - [Self::delete_transport()] to remove a transport.\n - [Self::set_transport_unpublished()] to set whether contacts see this transport.",
       "params": [
         {
           "name": "accountId",
@@ -990,7 +990,7 @@
     },
     {
       "name": "list_transports",
-      "description": " Returns the list of all email accounts that are used as a transport in the current profile.\n Use [Self::add_or_update_transport()] to add or change a transport\n and [Self::delete_transport()] to delete a transport.",
+      "description": " Returns the list of all email accounts that are used as a transport in the current profile.\n Use [Self::add_or_update_transport()] to add or change a transport\n and [Self::delete_transport()] to delete a transport.\n Use [Self::list_transports_ex()] to additionally query\n whether the transports are marked as 'unpublished'.",
       "params": [
         {
           "name": "accountId",
@@ -1008,6 +1008,32 @@
           "type": "array",
           "items": {
             "$ref": "#/components/schemas/EnteredLoginParam"
+          }
+        },
+        "required": true
+      },
+      "paramStructure": "by-position"
+    },
+    {
+      "name": "list_transports_ex",
+      "description": " Returns the list of all email accounts that are used as a transport in the current profile.\n Use [Self::add_or_update_transport()] to add or change a transport\n and [Self::delete_transport()] to delete a transport.",
+      "params": [
+        {
+          "name": "accountId",
+          "schema": {
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0.0
+          },
+          "required": true
+        }
+      ],
+      "result": {
+        "name": "ListTransportsExResult",
+        "schema": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/TransportListEntry"
           }
         },
         "required": true
@@ -1037,6 +1063,43 @@
       ],
       "result": {
         "name": "DeleteTransportResult",
+        "schema": {
+          "type": "null"
+        },
+        "required": true
+      },
+      "paramStructure": "by-position"
+    },
+    {
+      "name": "set_transport_unpublished",
+      "description": " Change whether the transport is unpublished.\n\n Unpublished transports are not advertised to contacts,\n and self-sent messages are not sent there,\n so that we don't cause extra messages to the corresponding inbox,\n but can still receive messages from contacts who don't know our new transport addresses yet.\n\n The default is false, but when the user updates from a version that didn't have this flag,\n existing secondary transports are set to unpublished,\n so that an existing transport address doesn't suddenly get spammed with a lot of messages.",
+      "params": [
+        {
+          "name": "accountId",
+          "schema": {
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0.0
+          },
+          "required": true
+        },
+        {
+          "name": "addr",
+          "schema": {
+            "type": "string"
+          },
+          "required": true
+        },
+        {
+          "name": "unpublished",
+          "schema": {
+            "type": "boolean"
+          },
+          "required": true
+        }
+      ],
+      "result": {
+        "name": "SetTransportUnpublishedResult",
         "schema": {
           "type": "null"
         },
@@ -1209,7 +1272,7 @@
     },
     {
       "name": "get_next_msgs",
-      "description": " Gets messages to be processed by the bot and returns their IDs.\n\n Only messages with database ID higher than `last_msg_id` config value\n are returned. After processing the messages, the bot should\n update `last_msg_id` by calling [`markseen_msgs`]\n or manually updating the value to avoid getting already\n processed messages.\n\n [`markseen_msgs`]: Self::markseen_msgs",
+      "description": " (deprecated) Gets messages to be processed by the bot and returns their IDs.\n\n Only messages with database ID higher than `last_msg_id` config value\n are returned. After processing the messages, the bot should\n update `last_msg_id` by calling [`markseen_msgs`]\n or manually updating the value to avoid getting already\n processed messages.\n\n Deprecated 2026-04: This returns the message's id as soon as the first part arrives,\n even if it is not fully downloaded yet.\n The bot needs to wait for the message to be fully downloaded.\n Since this is usually not the desired behavior,\n bots should instead use the #DC_EVENT_INCOMING_MSG / [`types::events::EventType::IncomingMsg`]\n event for getting notified about new messages.\n\n [`markseen_msgs`]: Self::markseen_msgs",
       "params": [
         {
           "name": "accountId",
@@ -1237,7 +1300,7 @@
     },
     {
       "name": "wait_next_msgs",
-      "description": " Waits for messages to be processed by the bot and returns their IDs.\n\n This function is similar to [`get_next_msgs`],\n but waits for internal new message notification before returning.\n New message notification is sent when new message is added to the database,\n on initialization, when I/O is started and when I/O is stopped.\n This allows bots to use `wait_next_msgs` in a loop to process\n old messages after initialization and during the bot runtime.\n To shutdown the bot, stopping I/O can be used to interrupt\n pending or next `wait_next_msgs` call.\n\n [`get_next_msgs`]: Self::get_next_msgs",
+      "description": " (deprecated) Waits for messages to be processed by the bot and returns their IDs.\n\n This function is similar to [`get_next_msgs`],\n but waits for internal new message notification before returning.\n New message notification is sent when new message is added to the database,\n on initialization, when I/O is started and when I/O is stopped.\n This allows bots to use `wait_next_msgs` in a loop to process\n old messages after initialization and during the bot runtime.\n To shutdown the bot, stopping I/O can be used to interrupt\n pending or next `wait_next_msgs` call.\n\n Deprecated 2026-04: This returns the message's id as soon as the first part arrives,\n even if it is not fully downloaded yet.\n The bot needs to wait for the message to be fully downloaded.\n Since this is usually not the desired behavior,\n bots should instead use the #DC_EVENT_INCOMING_MSG / [`types::events::EventType::IncomingMsg`]\n event for getting notified about new messages.\n\n [`get_next_msgs`]: Self::get_next_msgs",
       "params": [
         {
           "name": "accountId",
@@ -1265,7 +1328,7 @@
     },
     {
       "name": "estimate_auto_deletion_count",
-      "description": " Estimate the number of messages that will be deleted\n by the set_config()-options `delete_device_after` or `delete_server_after`.\n This is typically used to show the estimated impact to the user\n before actually enabling deletion of old messages.",
+      "description": " Estimates the number of messages that will be deleted\n by the `set_config()`-option `delete_device_after`.\n\n This is typically used to show the estimated impact to the user\n before actually enabling deletion of old messages.\n\n Messages in the \"Saved Messages\" chat are not counted as they will not be deleted automatically.\n\n Parameters:\n - `from_server`: Deprecated, pass `false` here\n - `seconds`: Count messages older than the given number of seconds.\n\n Returns the number of messages that are older than the given number of seconds.",
       "params": [
         {
           "name": "accountId",
@@ -1298,66 +1361,6 @@
           "type": "integer",
           "format": "uint",
           "minimum": 0.0
-        },
-        "required": true
-      },
-      "paramStructure": "by-position"
-    },
-    {
-      "name": "initiate_autocrypt_key_transfer",
-      "params": [
-        {
-          "name": "accountId",
-          "schema": {
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0.0
-          },
-          "required": true
-        }
-      ],
-      "result": {
-        "name": "InitiateAutocryptKeyTransferResult",
-        "schema": {
-          "type": "string"
-        },
-        "required": true
-      },
-      "paramStructure": "by-position"
-    },
-    {
-      "name": "continue_autocrypt_key_transfer",
-      "params": [
-        {
-          "name": "accountId",
-          "schema": {
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0.0
-          },
-          "required": true
-        },
-        {
-          "name": "messageId",
-          "schema": {
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0.0
-          },
-          "required": true
-        },
-        {
-          "name": "setupCode",
-          "schema": {
-            "type": "string"
-          },
-          "required": true
-        }
-      ],
-      "result": {
-        "name": "ContinueAutocryptKeyTransferResult",
-        "schema": {
-          "type": "null"
         },
         "required": true
       },
@@ -1724,7 +1727,7 @@
     },
     {
       "name": "get_chat_securejoin_qr_code_svg",
-      "description": " Get QR code (text and SVG) that will offer a Setup-Contact or Verified-Group invitation.\n The QR code is compatible to the OPENPGP4FPR format\n so that a basic fingerprint comparison also works e.g. with OpenKeychain.\n\n The scanning device will pass the scanned content to `checkQr()` then;\n if `checkQr()` returns `askVerifyContact` or `askVerifyGroup`\n an out-of-band-verification can be joined using `secure_join()`\n\n chat_id: If set to a group-chat-id,\n     the Verified-Group-Invite protocol is offered in the QR code;\n     works for protected groups as well as for normal groups.\n     If not set, the Setup-Contact protocol is offered in the QR code.\n     See https://securejoin.delta.chat/ for details about both protocols.\n\n return format: `[code, svg]`",
+      "description": " Get QR code (text and SVG) that will offer a Setup-Contact or Verified-Group invitation.\n The QR code is compatible to the OPENPGP4FPR format\n so that a basic fingerprint comparison also works e.g. with OpenKeychain.\n\n The scanning device will pass the scanned content to `checkQr()` then;\n if `checkQr()` returns `askVerifyContact` or `askVerifyGroup`\n an out-of-band-verification can be joined using `secure_join()`\n\n @deprecated as of 2026-03; use create_qr_svg(get_chat_securejoin_qr_code()) instead.\n\n chat_id: If set to a group-chat-id,\n     the Verified-Group-Invite protocol is offered in the QR code;\n     works for protected groups as well as for normal groups.\n     If not set, the Setup-Contact protocol is offered in the QR code.\n     See https://securejoin.delta.chat/ for details about both protocols.\n\n return format: `[code, svg]`",
       "params": [
         {
           "name": "accountId",
@@ -2144,7 +2147,7 @@
     },
     {
       "name": "create_broadcast",
-      "description": " Create a new, outgoing **broadcast channel**\n (called \"Channel\" in the UI).\n\n Broadcast channels are similar to groups on the sending device,\n however, recipients get the messages in a read-only chat\n and will not see who the other members are.\n\n Called `broadcast` here rather than `channel`,\n because the word \"channel\" already appears a lot in the code,\n which would make it hard to grep for it.\n\n After creation, the chat contains no recipients and is in _unpromoted_ state;\n see [`CommandApi::create_group_chat`] for more information on the unpromoted state.\n\n Returns the created chat's id.",
+      "description": " Create a new, outgoing **broadcast channel**\n (called \"Channel\" in the UI).\n\n Broadcast channels are similar to groups on the sending device,\n however, recipients get the messages in a read-only chat\n and will not see who the other members are.\n\n Called `broadcast` here rather than `channel`,\n because the word \"channel\" already appears a lot in the code,\n which would make it hard to grep for it.\n\n Returns the created chat's id.",
       "params": [
         {
           "name": "accountId",
@@ -2542,6 +2545,38 @@
       "paramStructure": "by-position"
     },
     {
+      "name": "markfresh_chat",
+      "description": " Marks the last incoming message in the chat as _fresh_.\n\n UI can use this to offer a \"mark unread\" option,\n so that already noticed chats get a badge counter again.",
+      "params": [
+        {
+          "name": "accountId",
+          "schema": {
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0.0
+          },
+          "required": true
+        },
+        {
+          "name": "chatId",
+          "schema": {
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0.0
+          },
+          "required": true
+        }
+      ],
+      "result": {
+        "name": "MarkfreshChatResult",
+        "schema": {
+          "type": "null"
+        },
+        "required": true
+      },
+      "paramStructure": "by-position"
+    },
+    {
       "name": "get_first_unread_message_of_chat",
       "description": " Returns the message that is immediately followed by the last seen\n message.\n From the point of view of the user this is effectively\n \"first unread\", but in reality in the database a seen message\n _can_ be followed by a fresh (unseen) message\n if that message has not been individually marked as seen.",
       "params": [
@@ -2686,7 +2721,7 @@
     },
     {
       "name": "get_message_ids",
-      "description": " Returns all messages of a particular chat.\n\n * `add_daymarker` - If `true`, add day markers as `DC_MSG_ID_DAYMARKER` to the result,\n   e.g. [1234, 1237, 9, 1239]. The day marker timestamp is the midnight one for the\n   corresponding (following) day in the local timezone.",
+      "description": " Get all message IDs belonging to a chat.\n\n The list is already sorted and starts with the oldest message.\n Clients should not try to re-sort the list as this would be an expensive action\n and would result in inconsistencies between clients.\n Note that the messages are not necessarily sorted by their ID or by their displayed timestamp;\n UIs need to handle both the case of descending message IDs\n and of decreasing timestamps.\n\n Optionally, 'daymarkers' added to the ID array may help to\n implement virtual lists.\n\n Parameters:\n\n * chat_id The chat ID of which the messages IDs should be queried.\n * _info_only: Deprecated, pass `false` here.\n * `add_daymarker` - If `true`, add day markers as `DC_MSG_ID_DAYMARKER` to the result,\n   e.g. [1234, 1237, 9, 1239]. The day marker timestamp is the midnight one for the\n   corresponding (following) day in the local timezone.",
       "params": [
         {
           "name": "accountId",
@@ -2777,6 +2812,7 @@
     },
     {
       "name": "get_message_list_items",
+      "description": " Get all messages belonging to a chat.\n\n Similar to `get_message_ids` / `getMessageIds`,\n see that function for details.\n The difference is that this function here returns a list of `MessageListItem`,\n which is an enum of a message or a daymarker.",
       "params": [
         {
           "name": "accountId",
@@ -3902,50 +3938,6 @@
       "paramStructure": "by-position"
     },
     {
-      "name": "set_draft_vcard",
-      "description": " Sets vCard containing the given contacts to the message draft.",
-      "params": [
-        {
-          "name": "accountId",
-          "schema": {
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0.0
-          },
-          "required": true
-        },
-        {
-          "name": "msgId",
-          "schema": {
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0.0
-          },
-          "required": true
-        },
-        {
-          "name": "contacts",
-          "schema": {
-            "type": "array",
-            "items": {
-              "type": "integer",
-              "format": "uint32",
-              "minimum": 0.0
-            }
-          },
-          "required": true
-        }
-      ],
-      "result": {
-        "name": "SetDraftVcardResult",
-        "schema": {
-          "type": "null"
-        },
-        "required": true
-      },
-      "paramStructure": "by-position"
-    },
-    {
       "name": "get_chat_id_by_contact_id",
       "description": " Returns the [`ChatId`] for the 1:1 chat with `contact_id` if it exists.\n\n If it does not exist, `None` is returned.",
       "params": [
@@ -4183,7 +4175,7 @@
     },
     {
       "name": "get_backup_qr_svg",
-      "description": " Returns the rendered QR code for the running [`CommandApi::provide_backup`].\n\n This QR code can be used in [`CommandApi::get_backup`] on a second device to\n retrieve the backup and setup this second device.\n\n This call will block until the QR code is ready,\n even if there is no concurrent call to [`CommandApi::provide_backup`],\n but will fail after 60 seconds to avoid deadlocks.\n\n Returns the QR code rendered as an SVG image.",
+      "description": " Returns the rendered QR code for the running [`CommandApi::provide_backup`].\n\n This QR code can be used in [`CommandApi::get_backup`] on a second device to\n retrieve the backup and setup this second device.\n\n This call will block until the QR code is ready,\n even if there is no concurrent call to [`CommandApi::provide_backup`],\n but will fail after 60 seconds to avoid deadlocks.\n\n @deprecated as of 2026-03; use `create_qr_svg(get_backup_qr())` instead.\n\n Returns the QR code rendered as an SVG image.",
       "params": [
         {
           "name": "accountId",
@@ -4197,6 +4189,27 @@
       ],
       "result": {
         "name": "GetBackupQrSvgResult",
+        "schema": {
+          "type": "string"
+        },
+        "required": true
+      },
+      "paramStructure": "by-position"
+    },
+    {
+      "name": "create_qr_svg",
+      "description": " Renders the given text as a QR code SVG image.",
+      "params": [
+        {
+          "name": "text",
+          "schema": {
+            "type": "string"
+          },
+          "required": true
+        }
+      ],
+      "result": {
+        "name": "CreateQrSvgResult",
         "schema": {
           "type": "string"
         },
@@ -4296,6 +4309,44 @@
       "paramStructure": "by-position"
     },
     {
+      "name": "set_location",
+      "description": " Sets current location.\n\n Returns true if location streaming is currently\n enabled and locations should be updated.\n\n Location is represented as latitude and longitude in degrees\n and horizontal accuracy in meters.",
+      "params": [
+        {
+          "name": "latitude",
+          "schema": {
+            "type": "number",
+            "format": "double"
+          },
+          "required": true
+        },
+        {
+          "name": "longitude",
+          "schema": {
+            "type": "number",
+            "format": "double"
+          },
+          "required": true
+        },
+        {
+          "name": "accuracy",
+          "schema": {
+            "type": "number",
+            "format": "double"
+          },
+          "required": true
+        }
+      ],
+      "result": {
+        "name": "SetLocationResult",
+        "schema": {
+          "type": "boolean"
+        },
+        "required": true
+      },
+      "paramStructure": "by-position"
+    },
+    {
       "name": "get_locations",
       "params": [
         {
@@ -4355,6 +4406,114 @@
           "items": {
             "$ref": "#/components/schemas/Location"
           }
+        },
+        "required": true
+      },
+      "paramStructure": "by-position"
+    },
+    {
+      "name": "send_locations_to_chat",
+      "description": " Enables location streaming in chat identified by `chat_id` for `seconds` seconds.\n\n Pass 0 as the number of seconds to disable location streaming in the chat.",
+      "params": [
+        {
+          "name": "accountId",
+          "schema": {
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0.0
+          },
+          "required": true
+        },
+        {
+          "name": "chatId",
+          "schema": {
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0.0
+          },
+          "required": true
+        },
+        {
+          "name": "seconds",
+          "schema": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "required": true
+        }
+      ],
+      "result": {
+        "name": "SendLocationsToChatResult",
+        "schema": {
+          "type": "null"
+        },
+        "required": true
+      },
+      "paramStructure": "by-position"
+    },
+    {
+      "name": "is_sending_locations",
+      "description": " Returns whether any chat is sending locations.",
+      "params": [
+        {
+          "name": "accountId",
+          "schema": {
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0.0
+          },
+          "required": true
+        }
+      ],
+      "result": {
+        "name": "IsSendingLocationsResult",
+        "schema": {
+          "type": "boolean"
+        },
+        "required": true
+      },
+      "paramStructure": "by-position"
+    },
+    {
+      "name": "is_sending_locations_to_chat",
+      "description": " Returns whether `chat_id` is sending locations.",
+      "params": [
+        {
+          "name": "accountId",
+          "schema": {
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0.0
+          },
+          "required": true
+        },
+        {
+          "name": "chatId",
+          "schema": {
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0.0
+          },
+          "required": true
+        }
+      ],
+      "result": {
+        "name": "IsSendingLocationsToChatResult",
+        "schema": {
+          "type": "boolean"
+        },
+        "required": true
+      },
+      "paramStructure": "by-position"
+    },
+    {
+      "name": "stop_sending_locations",
+      "description": " Stops sending locations to all chats.",
+      "params": [],
+      "result": {
+        "name": "StopSendingLocationsResult",
+        "schema": {
+          "type": "null"
         },
         "required": true
       },
@@ -5068,6 +5227,7 @@
     },
     {
       "name": "send_sticker",
+      "description": " @deprecated as of 2026-04; use `send_msg` with `Viewtype::Sticker` instead.",
       "params": [
         {
           "name": "accountId",
@@ -5108,7 +5268,7 @@
     },
     {
       "name": "send_reaction",
-      "description": " Send a reaction to message.\n\n Reaction is a string of emojis separated by spaces. Reaction to a\n single message can be sent multiple times. The last reaction\n received overrides all previously received reactions. It is\n possible to remove all reactions by sending an empty string.",
+      "description": " Sends a reaction to message.\n\n A reaction is a string that represents an emoji.\n You can call this function again to change the emoji;\n the last sent reaction overrides all previously sent reactions.\n It is possible to remove the reaction by sending an empty string.",
       "params": [
         {
           "name": "accountId",
@@ -6389,6 +6549,13 @@
               }
             ]
           },
+          "imapFolder": {
+            "description": "IMAP server folder.\n\nDefaults to \"INBOX\" if not set. Should not be an empty string.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "imapPort": {
             "description": "Imap server port.",
             "type": [
@@ -7662,6 +7829,7 @@
             "type": "object",
             "required": [
               "chat_id",
+              "from_this_device",
               "kind",
               "msg_id"
             ],
@@ -7671,6 +7839,10 @@
                 "type": "integer",
                 "format": "uint32",
                 "minimum": 0.0
+              },
+              "from_this_device": {
+                "description": "The call was accepted from this device (process).",
+                "type": "boolean"
               },
               "kind": {
                 "type": "string",
@@ -7985,7 +8157,6 @@
           "isEdited",
           "isForwarded",
           "isInfo",
-          "isSetupmessage",
           "receivedTimestamp",
           "sender",
           "showPadlock",
@@ -8091,9 +8262,6 @@
           "isInfo": {
             "type": "boolean"
           },
-          "isSetupmessage": {
-            "type": "boolean"
-          },
           "originalMsgId": {
             "type": [
               "integer",
@@ -8150,12 +8318,6 @@
           },
           "sender": {
             "$ref": "#/components/schemas/Contact"
-          },
-          "setupCodeBegin": {
-            "type": [
-              "string",
-              "null"
-            ]
           },
           "showPadlock": {
             "description": "True if the message was correctly encrypted&signed, false otherwise. Historically, UIs showed a small padlock on the message then.\n\nToday, the UIs should instead show a small email-icon on the message if `show_padlock` is `false`, and nothing if it is `true`.",
@@ -8388,7 +8550,6 @@
               "isEdited",
               "isForwarded",
               "isInfo",
-              "isSetupmessage",
               "kind",
               "receivedTimestamp",
               "sender",
@@ -8495,9 +8656,6 @@
               "isInfo": {
                 "type": "boolean"
               },
-              "isSetupmessage": {
-                "type": "boolean"
-              },
               "kind": {
                 "type": "string",
                 "enum": [
@@ -8560,12 +8718,6 @@
               },
               "sender": {
                 "$ref": "#/components/schemas/Contact"
-              },
-              "setupCodeBegin": {
-                "type": [
-                  "string",
-                  "null"
-                ]
               },
               "showPadlock": {
                 "description": "True if the message was correctly encrypted&signed, false otherwise. Historically, UIs showed a small padlock on the message then.\n\nToday, the UIs should instead show a small email-icon on the message if `show_padlock` is `false`, and nothing if it is `true`.",
@@ -8980,6 +9132,7 @@
               "contact_id",
               "fingerprint",
               "invitenumber",
+              "is_v3",
               "kind"
             ],
             "properties": {
@@ -9001,6 +9154,10 @@
                 "description": "Invite number.",
                 "type": "string"
               },
+              "is_v3": {
+                "description": "Whether the inviter supports the new Securejoin v3 protocol",
+                "type": "boolean"
+              },
               "kind": {
                 "type": "string",
                 "enum": [
@@ -9019,6 +9176,7 @@
               "grpid",
               "grpname",
               "invitenumber",
+              "is_v3",
               "kind"
             ],
             "properties": {
@@ -9048,6 +9206,10 @@
                 "description": "Invite number.",
                 "type": "string"
               },
+              "is_v3": {
+                "description": "Whether the inviter supports the new Securejoin v3 protocol",
+                "type": "boolean"
+              },
               "kind": {
                 "type": "string",
                 "enum": [
@@ -9065,6 +9227,7 @@
               "fingerprint",
               "grpid",
               "invitenumber",
+              "is_v3",
               "kind",
               "name"
             ],
@@ -9090,6 +9253,10 @@
               "invitenumber": {
                 "description": "Invite number.",
                 "type": "string"
+              },
+              "is_v3": {
+                "description": "Whether the inviter supports the new Securejoin v3 protocol",
+                "type": "boolean"
               },
               "kind": {
                 "type": "string",
@@ -9674,7 +9841,7 @@
             }
           },
           "reactionsByContact": {
-            "description": "Map from a contact to it's reaction to message.",
+            "description": "Map from a contact to it's reaction to message. There is only a single reaction per contact, but this contains a list of reactions for historical reasons.",
             "type": "object",
             "additionalProperties": {
               "type": "array",
@@ -9856,6 +10023,23 @@
           }
         ]
       },
+      "TransportListEntry": {
+        "type": "object",
+        "required": [
+          "isUnpublished",
+          "param"
+        ],
+        "properties": {
+          "isUnpublished": {
+            "description": "Whether this transport is set to 'unpublished'. See `set_transport_unpublished` / `setTransportUnpublished` for details.",
+            "type": "boolean"
+          },
+          "param": {
+            "description": "The login data entered by the user.",
+            "$ref": "#/components/schemas/EnteredLoginParam"
+          }
+        }
+      },
       "VcardContact": {
         "type": "object",
         "required": [
@@ -9930,7 +10114,7 @@
             ]
           },
           {
-            "description": "Message containing a sticker, similar to image. NB: When sending, the message viewtype may be changed to `Image` by some heuristics like checking for transparent pixels. Use `Message::force_sticker()` to disable them.\n\nIf possible, the ui should display the image without borders in a transparent way. A click on a sticker will offer to install the sticker set in some future.",
+            "description": "Message containing a sticker, similar to image.\n\nIf possible, the ui should display the image without borders in a transparent way. A click on a sticker will offer to install the sticker set in some future.",
             "type": "string",
             "enum": [
               "Sticker"
@@ -9992,6 +10176,8 @@
         "required": [
           "icon",
           "internetAccess",
+          "isAppSender",
+          "isBroadcast",
           "name",
           "selfAddr",
           "sendUpdateInterval",
@@ -10011,6 +10197,14 @@
           },
           "internetAccess": {
             "description": "True if full internet access should be granted to the app.",
+            "type": "boolean"
+          },
+          "isAppSender": {
+            "description": "Define if the local user is the one who initially shared the webxdc application in the chat.",
+            "type": "boolean"
+          },
+          "isBroadcast": {
+            "description": "Define if the app runs in a broadcasting context.",
             "type": "boolean"
           },
           "name": {
