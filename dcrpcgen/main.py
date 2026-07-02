@@ -62,7 +62,7 @@ def main(args=None) -> None:
     if not hasattr(args, "func"):
         parser.parse_args(["-h"])
     if not hasattr(args, "folder"):
-        args.folder = Path("generated")
+        args.folder = Path("generated", args.func.__name__.removesuffix("_cmd"))
 
     if not hasattr(args, "openrpc_spec") or not args.openrpc_spec:
         cmd = "deltachat-rpc-server"
