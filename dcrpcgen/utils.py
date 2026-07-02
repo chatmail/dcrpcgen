@@ -14,7 +14,7 @@ def camel2snake(name: str) -> str:
 
 
 def snake2camel(name: str) -> str:
-    """Convert snakeCase string to camel_case"""
+    """Convert snake_case string to camelCase"""
     parts = name.split("_")
     return parts[0] + "".join(word.capitalize() for word in parts[1:])
 
