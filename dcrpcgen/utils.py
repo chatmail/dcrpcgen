@@ -2,7 +2,7 @@
 
 import argparse
 import re
-from typing import Callable
+from typing import Any, Callable
 
 
 def camel2snake(name: str) -> str:
@@ -46,3 +46,11 @@ def add_subcommand(
     p = subparsers.add_parser(name, description=doc, help=doc, parents=[base])
     p.set_defaults(func=func)
     return p
+
+
+def get_variant_kind(schema: dict[str, Any]) -> str:
+    assert schema["type"] == "object"
+    kind = schema["properties"]["kind"]
+    assert kind["type"] == "string"
+    assert len(kind["enum"]) == 1
+    return kind["enum"][0]

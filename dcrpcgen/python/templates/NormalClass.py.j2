@@ -1,0 +1,4 @@
+@dataclass(kw_only=True)
+class {{ name }}:
+{% if "description" in schema %}{{ create_comment(schema["description"], "    ", docstr=True) + "\n" }}{% endif -%}
+{{ generate_properties(schema["properties"], False) -}}

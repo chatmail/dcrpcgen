@@ -1,0 +1,8 @@
+{% for variant in schema["oneOf"] %}
+  {{- generate_variant(name, variant) }}
+{% endfor -%}
+{% if "description" in schema %}{{ create_comment(schema["description"]) + "\n" }}{% endif -%}
+{{ name }}: TypeAlias = {{ get_union_type(name, schema["oneOf"]) }}
+
+
+{{ generate_unmarshal_hook(name, schema["oneOf"]) }}
