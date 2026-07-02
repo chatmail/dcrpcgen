@@ -3,6 +3,7 @@
 from pathlib import Path
 from typing import Any
 
+from ..utils import get_variant_kind
 from .templates import get_template
 from .utils import create_comment, decode_type, get_banner
 
@@ -47,11 +48,7 @@ def generate_supertype(folder: Path, package: str, name: str, schema: dict[str, 
 
 def get_subtype_name(schema: dict[str, Any]) -> str:
     """Get class name from the given child class schema"""
-    assert schema["type"] == "object"
-    kind = schema["properties"]["kind"]
-    assert kind["type"] == "string"
-    assert len(kind["enum"]) == 1
-    name = kind["enum"][0]
+    name = get_variant_kind(schema)
     return name[0].upper() + name[1:]
 
 
