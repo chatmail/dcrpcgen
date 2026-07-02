@@ -9,6 +9,19 @@ ignore-paths:
 ignore-patterns:
   - (^|/)skip(this)?(/|$)
 
+pycodestyle:
+  disable:
+    - E501
+
+pylint:
+  disable:
+     - line-too-long
+     - too-many-arguments
+     - too-many-branches
+     - too-many-locals
+     - too-many-boolean-expressions
+     - too-many-positional-arguments
+
 mccabe:
   run: false
 

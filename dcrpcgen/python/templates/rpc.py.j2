@@ -1,0 +1,23 @@
+"""JSON-RPC API definition."""
+
+# flake8: noqa
+from typing import Any, Optional
+
+from ._utils import snakeclass2cameldict as _wrap
+from .transport import RpcTransport
+from .types import (
+{%- for class_name in typegen.export_names %}
+    {{ class_name }},
+{%- endfor %}
+)
+
+
+class Rpc:
+    """Access to the chatmail JSON-RPC API."""
+
+    def __init__(self, transport: RpcTransport) -> None:
+        self.transport = transport
+
+{% for method in methods %}
+  {{- generate_method(method, typegen.dataclass_types, typegen.alias_types)}}
+{% endfor -%}
