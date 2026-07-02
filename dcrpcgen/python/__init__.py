@@ -52,4 +52,4 @@ def python_cmd(args: argparse.Namespace) -> None:
 
 
 def _format(code: str) -> str:
-    return black.format_str(isort.code(code), mode=black.FileMode())
+    return black.format_str(isort.code(code), mode=black.FileMode(line_length=100))
